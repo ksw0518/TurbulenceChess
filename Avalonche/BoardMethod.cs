@@ -219,12 +219,22 @@ namespace Turbulence
                 if (fen[index] == 'Q') board.castle |= WhiteQueenCastle;
                 if (fen[index] == 'k') board.castle |= BlackKingCastle;
                 if (fen[index] == 'q') board.castle |= BlackQueenCastle;
+
+                if (fen[index] == '-')
+                {
+                    board.castle = 0;
+                    break;
+                }
+
+
                 if (fen[index] == ' ') break;
                 index++;
             }
             index++;
+            if (fen[index] == ' ') index++;
             if (fen[index] != '-')
             {
+                //Console.WriteLine(fen[index]);
                 int file = fen[index] - 'a';
                 int rank = 8 - (fen[index + 1] - '0');
 
@@ -233,6 +243,7 @@ namespace Turbulence
             }
             else
             {
+                //Console.WriteLine(fen[index]);
                 board.enpassent = (int)Square.no_sq;
             }
             for (int piece = (int)Piece.P; piece <= (int)Piece.K; piece++)

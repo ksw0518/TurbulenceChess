@@ -56,8 +56,8 @@ namespace Turbulence
         public static int[][] MVVLVA_T = new int[6][] ;
         public static Dictionary<int, int> MVVLVA_PieceInd = new Dictionary<int, int> { { Piece.P, 0 }, { Piece.N, 1 }, { Piece.B, 2 }, { Piece.R, 3 }, { Piece.Q, 4 }, { Piece.K, 5 } };
 
-        const int plusINFINITY = 30000;
-        const int minusINFINITY = -30000;
+        const int plusINFINITY = 300000;
+        const int minusINFINITY = -300000;
         static int ply = 0;
 
         static int MAX_QDEPTH = 6;
@@ -93,7 +93,13 @@ namespace Turbulence
                 TT_hit = 0;
 
                 List<ulong> Three_fold_forSearch = new List<ulong>(Three_fold);
+                //Console.WriteLine(DetectThreefold(ref Three_fold_forSearch));
+                //for (int j = 0; j < Three_fold_forSearch.Count; j++)
+                //{
+                //    Console.WriteLine(Three_fold_forSearch[j]);
+                //}
                 nodes = 0;
+                q_count = 0;
                 //Console.WriteLine(i);
                 lastBmove = new Move(bestmove.From, bestmove.To, bestmove.Type, bestmove.Piece);
                 if (time_ellapsed.ElapsedMilliseconds >= THINK_TIME)
@@ -127,14 +133,34 @@ namespace Turbulence
 
 
                 if (!isSuccess) break;
+                int realNodes = nodes + q_count;
                 float time = (float)st.Elapsed.TotalNanoseconds;
                 float timeMS = time / 1000000;
-                float NPS = nodes / ((timeMS / 1000));
+                float NPS = realNodes / ((timeMS / 1000));
                 float NPSinM = NPS / 1000000;
                 Console.Write("info depth " + i);
-                Console.Write(" score cp " + eval);
+                
+                if(eval > 30000 || eval < -30000)  //mate
+                {
+                    string eval_mate = "";
+                    if (eval > 30000)
+                    {
+                        eval_mate = "mate " + ((49000 - eval + 1) / 2);
+                    }
+                    else
+                    {
+                        eval_mate = "mate " + -(49000 - (-eval)) / 2;
+                    }
+                    Console.Write(" score " + eval_mate);
+
+                }
+                else
+                {
+                    Console.Write(" score cp " + eval);
+                }
+                
                 Console.Write(" time " + (int)timeMS);
-                Console.Write(" nodes " + nodes);
+                Console.Write(" nodes " + realNodes);
                 if ((int)NPS < 0) NPS = 0;
                 Console.Write(" nps " + (int)NPS);
                // Console.Write(" q_move " + q_count);
@@ -146,7 +172,7 @@ namespace Turbulence
                     Console.Write(" ");
                 }
 
-                Console.WriteLine(TT_hit);
+                //Console.WriteLine(TT_hit);
                 Console.Write("\n");
 
                 if (IS_SEARCH_STOPPED) break;
@@ -172,7 +198,11 @@ namespace Turbulence
             board.halfmove++;
 
             Three_fold.Add(Zobrist);
-
+            //Console.WriteLine(DetectThreefold(ref Three_fold));
+            //for (int j = 0; j < Three_fold.Count; j++)
+            //{
+            //    Console.WriteLine(Three_fold[j]);
+            //}
             Console.Write("\n");
             //Move bestmove = 
 
@@ -221,7 +251,7 @@ namespace Turbulence
             Move TT_Best_Move;
             score = probeHash(depth, alpha, beta, ref TTtable, ZobristKey, out TT_Best_Move);
             if (score != valUNKNOWN)
-            {
+            { 
                 //if (ply == 0)
                 //{
                 //    Console.WriteLine("depth 1");
@@ -245,9 +275,18 @@ namespace Turbulence
                 
                 return quiescence;
             }
+            //if (lmove.To == Square.d4 && lmove.From == Square.f5)
+            //{
+            //    Console.WriteLine(DetectThreefold(ref threeFoldRep));
+            //    for (int j = 0; j < threeFoldRep.Count; j++)
+            //    {
+            //        Console.WriteLine(threeFoldRep[j]);
+            //    }
+            //}
 
-            if(DetectThreefold(ref threeFoldRep))
+            if (DetectThreefold(ref threeFoldRep))
             {
+                //Console.WriteLine("threefold");
                 return 0;
             }
             int best_score = int.MinValue;
@@ -259,10 +298,12 @@ namespace Turbulence
             
             if (movelist.Count == 0)
             {
+                //Console.WriteLine("no move");
                 int KingSq = (board.side == Side.White) ? get_ls1b(board.bitboards[Piece.K]) : get_ls1b(board.bitboards[Piece.k]);
 
-                if(is_square_attacked(KingSq, board.side, board, board.occupancies[Side.Both]))
+                if(is_square_attacked(KingSq, 1 - board.side, board, board.occupancies[Side.Both]))
                 {
+                    //Console.WriteLine(-49000 + ply);
                     return -49000 + ply;
 
                 }
@@ -271,7 +312,7 @@ namespace Turbulence
                     return 0;
                 }
             }
-            if (isMoveorder & depth != 1 )
+            if (isMoveorder && depth != 1 )
             {
                 SortMoves(movelist, lmove, ref board);
                 //movelist.Sort((move1, move2) => CompareMoves(move1, move2, lmove, ref board));
@@ -376,7 +417,7 @@ namespace Turbulence
             
         }
 
-        static bool DetectThreefold(ref List<ulong> Rep_table)
+        public static bool DetectThreefold(ref List<ulong> Rep_table)
         {
             if(Rep_table.Count < 3) return false;
 
@@ -384,8 +425,14 @@ namespace Turbulence
             ulong currentHash = Rep_table[table_length];
             int rep_count = 0;
 
-            for (int i = rep_count - 2; i >= 0; i -= 2)
+
+            //Console.WriteLine("currhash " + currentHash);
+            //Console.WriteLine(table_length);
+            for (int i = table_length - 2; i >= 0; i -= 2)
             {
+                //Console.WriteLine(i);
+                //Console.WriteLine("compare " + Rep_table[i]);
+
                 if (Rep_table[i] == currentHash)
                 {
                     rep_count++;
@@ -395,6 +442,7 @@ namespace Turbulence
                     }
                 }
             }
+            //Console.WriteLine(rep_count);
             return false;
 
         }
@@ -432,6 +480,7 @@ namespace Turbulence
             //Transposition hash_entry = TTtable[get_hash_Key(Zobrist, TT_SIZE)]
             if (TTtable[get_hash_Key(Zobrist, TT_SIZE)] == null) // hash empty
             {
+                //Console.WriteLine("a");
                 TTtable[get_hash_Key(Zobrist, TT_SIZE)] = new Transposition();
                 TTtable[get_hash_Key(Zobrist, TT_SIZE)].key = Zobrist;
                 TTtable[get_hash_Key(Zobrist, TT_SIZE)].value = score;
@@ -442,6 +491,12 @@ namespace Turbulence
             }
             else if(ply > TTtable[get_hash_Key(Zobrist, TT_SIZE)].ply) //depth scheme
             {
+                
+                //Console.WriteLine(TTtable[get_hash_Key(Zobrist, TT_SIZE)].ply);
+                //Console.WriteLine(ply);
+                //Console.Write("\n");
+
+
                 TTtable[get_hash_Key(Zobrist, TT_SIZE)].key = Zobrist;
                 TTtable[get_hash_Key(Zobrist, TT_SIZE)].value = score;
                 TTtable[get_hash_Key(Zobrist, TT_SIZE)].flags = hash_flag;

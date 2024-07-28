@@ -9,6 +9,7 @@ using static Turbulence.BoardMethod;
 using static Turbulence.MoveMethod;
 using static Turbulence.Search;
 using System.Text.RegularExpressions;
+using System.Runtime.CompilerServices;
 
 namespace Turbulence
 {
@@ -388,11 +389,12 @@ namespace Turbulence
             between &= ~(1UL << b);
             return between;
         }
-
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static ulong between(int a, int b)
         {
             return betweenTable[a, b];
         }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int getSide(int piece)
         {
             return (piece > 5) ? Side.Black : Side.White;
@@ -458,636 +460,681 @@ namespace Turbulence
                     }
                 }
             }
-            if (move.Type == quiet_move || move.Type == double_pawn_push)
+
+            switch (move.Type)
             {
-
-                //update piece bitboard
-                board.bitboards[move.Piece] &= ~(1UL << move.From);
-                board.bitboards[move.Piece] |= (1UL << move.To);
-
-                //update moved piece occupancy
-                board.occupancies[side] &= ~(1UL << move.From);
-                board.occupancies[side] |= (1UL << move.To);
-
-                //update both occupancy
-                board.occupancies[Side.Both] &= ~(1UL << move.From);
-                board.occupancies[Side.Both] |= (1UL << move.To);
-                //update mailbox
-                board.mailbox[move.From] = -1;
-                board.mailbox[move.To] = move.Piece;
-
-                //update enpassent square
-                if (move.Type == double_pawn_push)
-                {
-                    if (side == Side.White)
+                case double_pawn_push:
                     {
-                        board.enpassent = move.To + 8;
-                    }
-                    else
-                    {
-                        board.enpassent = move.To - 8;
-                    }
+                        board.bitboards[move.Piece] &= ~(1UL << move.From);
+                        board.bitboards[move.Piece] |= (1UL << move.To);
 
-                }
+                        //update moved piece occupancy
+                        board.occupancies[side] &= ~(1UL << move.From);
+                        board.occupancies[side] |= (1UL << move.To);
 
-                Zobrist ^= PIECES[move.Piece][move.From];
-                Zobrist ^= PIECES[move.Piece][move.To];
+                        //update both occupancy
+                        board.occupancies[Side.Both] &= ~(1UL << move.From);
+                        board.occupancies[Side.Both] |= (1UL << move.To);
+                        //update mailbox
+                        board.mailbox[move.From] = -1;
+                        board.mailbox[move.To] = move.Piece;
 
-            }
-            else if (move.Type == capture)
-            {
-                if (board.mailbox[move.To] == get_piece(Piece.r, 1 - side))
-                {
-                    if (getFile(move.To) == 0) // a file rook captured; delete queen castle
-                    {
-                        if (side == Side.White) // have to delete black queen castle
-                        {
-                            if (getRank(move.To) == 7)
+                        //update enpassent square
+
+                            if (side == Side.White)
                             {
-                                board.castle &= ~(BlackQueenCastle);
+                                board.enpassent = move.To + 8;
+                            }
+                            else
+                            {
+                                board.enpassent = move.To - 8;
                             }
 
-                            //Console.WriteLine("here");
+                        
+
+                        Zobrist ^= PIECES[move.Piece][move.From];
+                        Zobrist ^= PIECES[move.Piece][move.To];
+
+                        break;
+                    }
+                case quiet_move:
+                    {
+                        board.bitboards[move.Piece] &= ~(1UL << move.From);
+                        board.bitboards[move.Piece] |= (1UL << move.To);
+
+                        //update moved piece occupancy
+                        board.occupancies[side] &= ~(1UL << move.From);
+                        board.occupancies[side] |= (1UL << move.To);
+
+                        //update both occupancy
+                        board.occupancies[Side.Both] &= ~(1UL << move.From);
+                        board.occupancies[Side.Both] |= (1UL << move.To);
+                        //update mailbox
+                        board.mailbox[move.From] = -1;
+                        board.mailbox[move.To] = move.Piece;
+
+                        //update enpassent square
+                        //if (move.Type == double_pawn_push)
+                        //{
+                        //    if (side == Side.White)
+                        //    {
+                        //        board.enpassent = move.To + 8;
+                        //    }
+                        //    else
+                        //    {
+                        //        board.enpassent = move.To - 8;
+                        //    }
+
+                        //}
+
+                        Zobrist ^= PIECES[move.Piece][move.From];
+                        Zobrist ^= PIECES[move.Piece][move.To];
+
+                        break;
+                    }
+                case capture:
+                    {
+                        if (board.mailbox[move.To] == get_piece(Piece.r, 1 - side))
+                        {
+                            if (getFile(move.To) == 0) // a file rook captured; delete queen castle
+                            {
+                                if (side == Side.White) // have to delete black queen castle
+                                {
+                                    if (getRank(move.To) == 7)
+                                    {
+                                        board.castle &= ~(BlackQueenCastle);
+                                    }
+
+                                    //Console.WriteLine("here");
+                                }
+                                else
+                                {
+                                    if (getRank(move.To) == 0)
+                                    {
+                                        board.castle &= ~(WhiteQueenCastle);
+                                    }
+
+                                }
+                            }
+                            else if (getFile(move.To) == 7) // h file rook captured; delete king castle
+                            {
+                                //Console.WriteLine("H capture");
+                                if (side == Side.White) // have to delete black king castle
+                                {
+                                    if (getRank(move.To) == 7)
+                                    {
+                                        board.castle &= ~(BlackKingCastle);
+                                    }
+
+                                }
+                                else
+                                {
+                                    if (getRank(move.To) == 0)
+                                    {
+                                        board.castle &= ~(WhiteKingCastle);
+                                    }
+
+                                }
+                            }
+                        }
+                        //update piece bitboard
+                        int captured_piece = board.mailbox[move.To];
+                        //PrintBoards(board);
+                        //print_mailbox(board.mailbox);
+                        //printMove(move);
+                        board.bitboards[move.Piece] &= ~(1UL << move.From);
+                        board.bitboards[move.Piece] |= (1UL << move.To);
+
+
+                        //Console.WriteLine(captured_piece);
+                        board.bitboards[captured_piece] &= ~(1UL << move.To);
+
+                        //update moved piece occupancy
+                        board.occupancies[side] &= ~(1UL << move.From);
+                        board.occupancies[side] |= (1UL << move.To);
+
+                        //update captured piece occupancy
+                        board.occupancies[1 - side] &= ~(1UL << move.To);
+
+                        //update both occupancy
+                        board.occupancies[Side.Both] &= ~(1UL << move.From);
+                        board.occupancies[Side.Both] |= (1UL << move.To);
+                        //update mailbox
+                        board.mailbox[move.From] = -1;
+                        board.mailbox[move.To] = move.Piece;
+
+
+                        Zobrist ^= PIECES[move.Piece][move.From];
+                        Zobrist ^= PIECES[move.Piece][move.To];
+                        Zobrist ^= PIECES[captured_piece][move.To];
+
+                        //Console.WriteLine(side);
+
+
+                        //Console.WriteLine(get_piece(Piece.r, side));
+                        break;
+                    }
+                case king_castle:
+                    {
+                        //update castling right & find rook square
+
+
+                        int rookSquare;
+                        if (side == Side.White)
+                        {
+                            rookSquare = (int)Square.h1;
+                            //board.castle &= ~WhiteKingCastle;
                         }
                         else
                         {
-                            if (getRank(move.To) == 0)
-                            {
-                                board.castle &= ~(WhiteQueenCastle);
-                            }
+                            rookSquare = (int)Square.h8;
+                            //board.castle &= ~BlackKingCastle;
 
                         }
-                    }
-                    else if (getFile(move.To) == 7) // h file rook captured; delete king castle
-                    {
-                        //Console.WriteLine("H capture");
-                        if (side == Side.White) // have to delete black king castle
-                        {
-                            if (getRank(move.To) == 7)
-                            {
-                                board.castle &= ~(BlackKingCastle);
-                            }
 
+
+                        board.bitboards[move.Piece] &= ~(1UL << move.From);
+                        board.bitboards[move.Piece] |= (1UL << move.To);
+
+                        board.bitboards[get_piece(Piece.r, side)] &= ~(1UL << rookSquare);
+                        board.bitboards[get_piece(Piece.r, side)] |= (1UL << (rookSquare - 2));
+
+
+                        //update moved piece occupancy
+                        board.occupancies[side] &= ~(1UL << move.From);
+                        board.occupancies[side] |= (1UL << move.To);
+
+                        board.occupancies[side] &= ~(1UL << rookSquare);
+                        board.occupancies[side] |= (1UL << (rookSquare - 2));
+
+                        //update both occupancy
+                        board.occupancies[Side.Both] &= ~(1UL << move.From);
+                        board.occupancies[Side.Both] |= (1UL << move.To);
+
+                        board.occupancies[Side.Both] &= ~(1UL << rookSquare);
+                        board.occupancies[Side.Both] |= (1UL << (rookSquare - 2));
+                        //update mailbox
+                        board.mailbox[move.From] = -1;
+                        board.mailbox[move.To] = move.Piece;
+
+                        board.mailbox[rookSquare] = -1;
+                        board.mailbox[rookSquare - 2] = get_piece(Piece.r, side);
+
+
+                        Zobrist ^= PIECES[move.Piece][move.From];
+                        Zobrist ^= PIECES[move.Piece][move.To];
+                        Zobrist ^= PIECES[get_piece(Piece.r, side)][rookSquare];
+                        Zobrist ^= PIECES[get_piece(Piece.r, side)][rookSquare - 2];
+                        break;
+                    }
+                case queen_castle:
+                    {
+                        //update castling right & find rook square
+
+
+                        int rookSquare;
+                        if (side == Side.White)
+                        {
+                            rookSquare = (int)Square.a1;
+                            //board.castle &= ~WhiteKingCastle;
                         }
                         else
                         {
-                            if (getRank(move.To) == 0)
-                            {
-                                board.castle &= ~(WhiteKingCastle);
-                            }
+                            rookSquare = (int)Square.a8;
+                            //board.castle &= ~BlackKingCastle;
 
                         }
+                        //Console.WriteLine(CoordinatesToChessNotation(rookSquare));
+
+                        board.bitboards[move.Piece] &= ~(1UL << move.From);
+                        board.bitboards[move.Piece] |= (1UL << move.To);
+
+                        board.bitboards[get_piece(Piece.r, side)] &= ~(1UL << rookSquare);
+                        board.bitboards[get_piece(Piece.r, side)] |= (1UL << (rookSquare + 3));
+
+
+                        //update moved piece occupancy
+                        board.occupancies[side] &= ~(1UL << move.From);
+                        board.occupancies[side] |= (1UL << move.To);
+
+                        board.occupancies[side] &= ~(1UL << rookSquare);
+                        board.occupancies[side] |= (1UL << (rookSquare + 3));
+
+                        //update both occupancy
+                        board.occupancies[Side.Both] &= ~(1UL << move.From);
+                        board.occupancies[Side.Both] |= (1UL << move.To);
+
+                        board.occupancies[Side.Both] &= ~(1UL << rookSquare);
+                        board.occupancies[Side.Both] |= (1UL << (rookSquare + 3));
+                        //update mailbox
+                        board.mailbox[move.From] = -1;
+                        board.mailbox[move.To] = move.Piece;
+
+                        board.mailbox[rookSquare] = -1;
+                        board.mailbox[rookSquare + 3] = get_piece(Piece.r, side);
+
+                        Zobrist ^= PIECES[move.Piece][move.From];
+                        Zobrist ^= PIECES[move.Piece][move.To];
+                        Zobrist ^= PIECES[get_piece(Piece.r, side)][rookSquare];
+                        Zobrist ^= PIECES[get_piece(Piece.r, side)][rookSquare + 3];
+                        break;
                     }
-                }
-                //update piece bitboard
-                int captured_piece = board.mailbox[move.To];
-                //PrintBoards(board);
-                //print_mailbox(board.mailbox);
-                //printMove(move);
-                board.bitboards[move.Piece] &= ~(1UL << move.From);
-                board.bitboards[move.Piece] |= (1UL << move.To);
-
-
-                //Console.WriteLine(captured_piece);
-                board.bitboards[captured_piece] &= ~(1UL << move.To);
-
-                //update moved piece occupancy
-                board.occupancies[side] &= ~(1UL << move.From);
-                board.occupancies[side] |= (1UL << move.To);
-
-                //update captured piece occupancy
-                board.occupancies[1 - side] &= ~(1UL << move.To);
-
-                //update both occupancy
-                board.occupancies[Side.Both] &= ~(1UL << move.From);
-                board.occupancies[Side.Both] |= (1UL << move.To);
-                //update mailbox
-                board.mailbox[move.From] = -1;
-                board.mailbox[move.To] = move.Piece;
-
-
-                Zobrist ^= PIECES[move.Piece][move.From];
-                Zobrist ^= PIECES[move.Piece][move.To];
-                Zobrist ^= PIECES[captured_piece][move.To];
-
-                //Console.WriteLine(side);
-
-
-                //Console.WriteLine(get_piece(Piece.r, side));
-
-
-
-
-            }
-            else if (move.Type == king_castle)
-            {
-                //update castling right & find rook square
-
-
-                int rookSquare;
-                if (side == Side.White)
-                {
-                    rookSquare = (int)Square.h1;
-                    //board.castle &= ~WhiteKingCastle;
-                }
-                else
-                {
-                    rookSquare = (int)Square.h8;
-                    //board.castle &= ~BlackKingCastle;
-
-                }
-
-
-                board.bitboards[move.Piece] &= ~(1UL << move.From);
-                board.bitboards[move.Piece] |= (1UL << move.To);
-
-                board.bitboards[get_piece(Piece.r, side)] &= ~(1UL << rookSquare);
-                board.bitboards[get_piece(Piece.r, side)] |= (1UL << (rookSquare - 2));
-
-
-                //update moved piece occupancy
-                board.occupancies[side] &= ~(1UL << move.From);
-                board.occupancies[side] |= (1UL << move.To);
-
-                board.occupancies[side] &= ~(1UL << rookSquare);
-                board.occupancies[side] |= (1UL << (rookSquare - 2));
-
-                //update both occupancy
-                board.occupancies[Side.Both] &= ~(1UL << move.From);
-                board.occupancies[Side.Both] |= (1UL << move.To);
-
-                board.occupancies[Side.Both] &= ~(1UL << rookSquare);
-                board.occupancies[Side.Both] |= (1UL << (rookSquare - 2));
-                //update mailbox
-                board.mailbox[move.From] = -1;
-                board.mailbox[move.To] = move.Piece;
-
-                board.mailbox[rookSquare] = -1;
-                board.mailbox[rookSquare - 2] = get_piece(Piece.r, side);
-
-
-                Zobrist ^= PIECES[move.Piece][move.From];
-                Zobrist ^= PIECES[move.Piece][move.To];
-                Zobrist ^= PIECES[get_piece(Piece.r, side)][rookSquare];
-                Zobrist ^= PIECES[get_piece(Piece.r, side)][rookSquare - 2];
-            }
-            else if (move.Type == queen_castle)
-            {
-                //update castling right & find rook square
-
-
-                int rookSquare;
-                if (side == Side.White)
-                {
-                    rookSquare = (int)Square.a1;
-                    //board.castle &= ~WhiteKingCastle;
-                }
-                else
-                {
-                    rookSquare = (int)Square.a8;
-                    //board.castle &= ~BlackKingCastle;
-
-                }
-                //Console.WriteLine(CoordinatesToChessNotation(rookSquare));
-
-                board.bitboards[move.Piece] &= ~(1UL << move.From);
-                board.bitboards[move.Piece] |= (1UL << move.To);
-
-                board.bitboards[get_piece(Piece.r, side)] &= ~(1UL << rookSquare);
-                board.bitboards[get_piece(Piece.r, side)] |= (1UL << (rookSquare + 3));
-
-
-                //update moved piece occupancy
-                board.occupancies[side] &= ~(1UL << move.From);
-                board.occupancies[side] |= (1UL << move.To);
-
-                board.occupancies[side] &= ~(1UL << rookSquare);
-                board.occupancies[side] |= (1UL << (rookSquare + 3));
-
-                //update both occupancy
-                board.occupancies[Side.Both] &= ~(1UL << move.From);
-                board.occupancies[Side.Both] |= (1UL << move.To);
-
-                board.occupancies[Side.Both] &= ~(1UL << rookSquare);
-                board.occupancies[Side.Both] |= (1UL << (rookSquare + 3));
-                //update mailbox
-                board.mailbox[move.From] = -1;
-                board.mailbox[move.To] = move.Piece;
-
-                board.mailbox[rookSquare] = -1;
-                board.mailbox[rookSquare + 3] = get_piece(Piece.r, side);
-
-                Zobrist ^= PIECES[move.Piece][move.From];
-                Zobrist ^= PIECES[move.Piece][move.To];
-                Zobrist ^= PIECES[get_piece(Piece.r, side)][rookSquare];
-                Zobrist ^= PIECES[get_piece(Piece.r, side)][rookSquare + 3];
-            }
-            else if (move.Type == queen_promo)
-            {
-                //update piece bitboard
-                board.bitboards[move.Piece] &= ~(1UL << move.From);
-                board.bitboards[get_piece(Piece.q, side)] |= (1UL << move.To);
-
-                //update moved piece occupancy
-                board.occupancies[side] &= ~(1UL << move.From);
-                board.occupancies[side] |= (1UL << move.To);
-
-                //update both occupancy
-                board.occupancies[Side.Both] &= ~(1UL << move.From);
-                board.occupancies[Side.Both] |= (1UL << move.To);
-                //update mailbox
-                board.mailbox[move.From] = -1;
-                board.mailbox[move.To] = get_piece(Piece.q, side);
-
-                Zobrist ^= PIECES[move.Piece][move.From];
-                Zobrist ^= PIECES[get_piece(Piece.q, side)][move.To];
-
-            }
-            else if (move.Type == rook_promo)
-            {
-                board.bitboards[move.Piece] &= ~(1UL << move.From);
-                board.bitboards[get_piece(Piece.r, side)] |= (1UL << move.To);
-
-                //update moved piece occupancy
-                board.occupancies[side] &= ~(1UL << move.From);
-                board.occupancies[side] |= (1UL << move.To);
-
-                //update both occupancy
-                board.occupancies[Side.Both] &= ~(1UL << move.From);
-                board.occupancies[Side.Both] |= (1UL << move.To);
-                //update mailbox
-                board.mailbox[move.From] = -1;
-                board.mailbox[move.To] = get_piece(Piece.r, side);
-                Zobrist ^= PIECES[move.Piece][move.From];
-                Zobrist ^= PIECES[get_piece(Piece.r, side)][move.To];
-            }
-            else if (move.Type == bishop_promo)
-            {
-                board.bitboards[move.Piece] &= ~(1UL << move.From);
-                board.bitboards[get_piece(Piece.b, side)] |= (1UL << move.To);
-
-                //update moved piece occupancy
-                board.occupancies[side] &= ~(1UL << move.From);
-                board.occupancies[side] |= (1UL << move.To);
-
-                //update both occupancy
-                board.occupancies[Side.Both] &= ~(1UL << move.From);
-                board.occupancies[Side.Both] |= (1UL << move.To);
-                //update mailbox
-                board.mailbox[move.From] = -1;
-                board.mailbox[move.To] = get_piece(Piece.b, side);
-                Zobrist ^= PIECES[move.Piece][move.From];
-                Zobrist ^= PIECES[get_piece(Piece.b, side)][move.To];
-            }
-            else if (move.Type == knight_promo)
-            {
-                board.bitboards[move.Piece] &= ~(1UL << move.From);
-                board.bitboards[get_piece(Piece.n, side)] |= (1UL << move.To);
-
-                //update moved piece occupancy
-                board.occupancies[side] &= ~(1UL << move.From);
-                board.occupancies[side] |= (1UL << move.To);
-
-                //update both occupancy
-                board.occupancies[Side.Both] &= ~(1UL << move.From);
-                board.occupancies[Side.Both] |= (1UL << move.To);
-                //update mailbox
-                board.mailbox[move.From] = -1;
-                board.mailbox[move.To] = get_piece(Piece.n, side);
-                Zobrist ^= PIECES[move.Piece][move.From];
-                Zobrist ^= PIECES[get_piece(Piece.n, side)][move.To];
-            }
-            else if (move.Type == queen_promo_capture)
-            {
-                if (board.mailbox[move.To] == get_piece(Piece.r, 1 - side))
-                {
-                    if (getFile(move.To) == 0) // a file rook captured; delete queen castle
+                case queen_promo:
                     {
-                        if (side == Side.White) // have to delete black queen castle
-                        {
-                            if (getRank(move.To) == 7)
-                            {
-                                board.castle &= ~(BlackQueenCastle);
-                            }
+                        board.bitboards[move.Piece] &= ~(1UL << move.From);
+                        board.bitboards[get_piece(Piece.q, side)] |= (1UL << move.To);
 
-                            //Console.WriteLine("here");
+                        //update moved piece occupancy
+                        board.occupancies[side] &= ~(1UL << move.From);
+                        board.occupancies[side] |= (1UL << move.To);
+
+                        //update both occupancy
+                        board.occupancies[Side.Both] &= ~(1UL << move.From);
+                        board.occupancies[Side.Both] |= (1UL << move.To);
+                        //update mailbox
+                        board.mailbox[move.From] = -1;
+                        board.mailbox[move.To] = get_piece(Piece.q, side);
+
+                        Zobrist ^= PIECES[move.Piece][move.From];
+                        Zobrist ^= PIECES[get_piece(Piece.q, side)][move.To];
+                        break;
+                    }
+                case rook_promo:
+                    {
+                        board.bitboards[move.Piece] &= ~(1UL << move.From);
+                        board.bitboards[get_piece(Piece.r, side)] |= (1UL << move.To);
+
+                        //update moved piece occupancy
+                        board.occupancies[side] &= ~(1UL << move.From);
+                        board.occupancies[side] |= (1UL << move.To);
+
+                        //update both occupancy
+                        board.occupancies[Side.Both] &= ~(1UL << move.From);
+                        board.occupancies[Side.Both] |= (1UL << move.To);
+                        //update mailbox
+                        board.mailbox[move.From] = -1;
+                        board.mailbox[move.To] = get_piece(Piece.r, side);
+                        Zobrist ^= PIECES[move.Piece][move.From];
+                        Zobrist ^= PIECES[get_piece(Piece.r, side)][move.To];
+
+                        break;
+                    }
+                case bishop_promo:
+                    {
+                        board.bitboards[move.Piece] &= ~(1UL << move.From);
+                        board.bitboards[get_piece(Piece.b, side)] |= (1UL << move.To);
+
+                        //update moved piece occupancy
+                        board.occupancies[side] &= ~(1UL << move.From);
+                        board.occupancies[side] |= (1UL << move.To);
+
+                        //update both occupancy
+                        board.occupancies[Side.Both] &= ~(1UL << move.From);
+                        board.occupancies[Side.Both] |= (1UL << move.To);
+                        //update mailbox
+                        board.mailbox[move.From] = -1;
+                        board.mailbox[move.To] = get_piece(Piece.b, side);
+                        Zobrist ^= PIECES[move.Piece][move.From];
+                        Zobrist ^= PIECES[get_piece(Piece.b, side)][move.To];
+                        break;
+                    }
+                case knight_promo:
+                    {
+                        board.bitboards[move.Piece] &= ~(1UL << move.From);
+                        board.bitboards[get_piece(Piece.n, side)] |= (1UL << move.To);
+
+                        //update moved piece occupancy
+                        board.occupancies[side] &= ~(1UL << move.From);
+                        board.occupancies[side] |= (1UL << move.To);
+
+                        //update both occupancy
+                        board.occupancies[Side.Both] &= ~(1UL << move.From);
+                        board.occupancies[Side.Both] |= (1UL << move.To);
+                        //update mailbox
+                        board.mailbox[move.From] = -1;
+                        board.mailbox[move.To] = get_piece(Piece.n, side);
+                        Zobrist ^= PIECES[move.Piece][move.From];
+                        Zobrist ^= PIECES[get_piece(Piece.n, side)][move.To];
+                        break;
+                    }
+                case queen_promo_capture:
+                    {
+                        if (board.mailbox[move.To] == get_piece(Piece.r, 1 - side))
+                        {
+                            if (getFile(move.To) == 0) // a file rook captured; delete queen castle
+                            {
+                                if (side == Side.White) // have to delete black queen castle
+                                {
+                                    if (getRank(move.To) == 7)
+                                    {
+                                        board.castle &= ~(BlackQueenCastle);
+                                    }
+
+                                    //Console.WriteLine("here");
+                                }
+                                else
+                                {
+                                    if (getRank(move.To) == 0)
+                                    {
+                                        board.castle &= ~(WhiteQueenCastle);
+                                    }
+
+                                }
+                            }
+                            else if (getFile(move.To) == 7) // h file rook captured; delete king castle
+                            {
+                                //Console.WriteLine("H capture");
+                                if (side == Side.White) // have to delete black king castle
+                                {
+                                    if (getRank(move.To) == 7)
+                                    {
+                                        board.castle &= ~(BlackKingCastle);
+                                    }
+
+                                }
+                                else
+                                {
+                                    if (getRank(move.To) == 0)
+                                    {
+                                        board.castle &= ~(WhiteKingCastle);
+                                    }
+
+                                }
+                            }
+                        }
+                        int captured_piece = board.mailbox[move.To];
+                        //update piece bitboard
+                        board.bitboards[move.Piece] &= ~(1UL << move.From);
+                        board.bitboards[get_piece(Piece.q, side)] |= (1UL << move.To);
+
+                        board.bitboards[captured_piece] &= ~(1UL << move.To);
+
+                        //update moved piece occupancy
+                        board.occupancies[side] &= ~(1UL << move.From);
+                        board.occupancies[side] |= (1UL << move.To);
+
+                        //update captured piece occupancy
+                        board.occupancies[1 - side] &= ~(1UL << move.To);
+
+                        //update both occupancy
+                        board.occupancies[Side.Both] &= ~(1UL << move.From);
+                        board.occupancies[Side.Both] |= (1UL << move.To);
+
+                        //update mailbox
+                        board.mailbox[move.From] = -1;
+                        board.mailbox[move.To] = get_piece(Piece.q, side);
+
+                        Zobrist ^= PIECES[move.Piece][move.From];
+                        Zobrist ^= PIECES[get_piece(Piece.q, side)][move.To];
+                        Zobrist ^= PIECES[captured_piece][move.To];
+
+                        break;
+                    }
+                case rook_promo_capture:
+                    {
+                        if (board.mailbox[move.To] == get_piece(Piece.r, 1 - side))
+                        {
+                            if (getFile(move.To) == 0) // a file rook captured; delete queen castle
+                            {
+                                if (side == Side.White) // have to delete black queen castle
+                                {
+                                    if (getRank(move.To) == 7)
+                                    {
+                                        board.castle &= ~(BlackQueenCastle);
+                                    }
+
+                                    //Console.WriteLine("here");
+                                }
+                                else
+                                {
+                                    if (getRank(move.To) == 0)
+                                    {
+                                        board.castle &= ~(WhiteQueenCastle);
+                                    }
+
+                                }
+                            }
+                            else if (getFile(move.To) == 7) // h file rook captured; delete king castle
+                            {
+                                //Console.WriteLine("H capture");
+                                if (side == Side.White) // have to delete black king castle
+                                {
+                                    if (getRank(move.To) == 7)
+                                    {
+                                        board.castle &= ~(BlackKingCastle);
+                                    }
+
+                                }
+                                else
+                                {
+                                    if (getRank(move.To) == 0)
+                                    {
+                                        board.castle &= ~(WhiteKingCastle);
+                                    }
+
+                                }
+                            }
+                        }
+                        int captured_piece = board.mailbox[move.To];
+                        //update piece bitboard
+                        board.bitboards[move.Piece] &= ~(1UL << move.From);
+                        board.bitboards[get_piece(Piece.r, side)] |= (1UL << move.To);
+
+                        board.bitboards[captured_piece] &= ~(1UL << move.To);
+
+                        //update moved piece occupancy
+                        board.occupancies[side] &= ~(1UL << move.From);
+                        board.occupancies[side] |= (1UL << move.To);
+
+                        //update captured piece occupancy
+                        board.occupancies[1 - side] &= ~(1UL << move.To);
+
+                        //update both occupancy
+                        board.occupancies[Side.Both] &= ~(1UL << move.From);
+                        board.occupancies[Side.Both] |= (1UL << move.To);
+
+                        //update mailbox
+                        board.mailbox[move.From] = -1;
+                        board.mailbox[move.To] = get_piece(Piece.r, side);
+
+                        Zobrist ^= PIECES[move.Piece][move.From];
+                        Zobrist ^= PIECES[get_piece(Piece.r, side)][move.To];
+                        Zobrist ^= PIECES[captured_piece][move.To];
+
+                        break;
+                    }
+                case bishop_promo_capture:
+                    {
+                        if (board.mailbox[move.To] == get_piece(Piece.r, 1 - side))
+                        {
+                            if (getFile(move.To) == 0) // a file rook captured; delete queen castle
+                            {
+                                if (side == Side.White) // have to delete black queen castle
+                                {
+                                    if (getRank(move.To) == 7)
+                                    {
+                                        board.castle &= ~(BlackQueenCastle);
+                                    }
+
+                                    //Console.WriteLine("here");
+                                }
+                                else
+                                {
+                                    if (getRank(move.To) == 0)
+                                    {
+                                        board.castle &= ~(WhiteQueenCastle);
+                                    }
+
+                                }
+                            }
+                            else if (getFile(move.To) == 7) // h file rook captured; delete king castle
+                            {
+                                //Console.WriteLine("H capture");
+                                if (side == Side.White) // have to delete black king castle
+                                {
+                                    if (getRank(move.To) == 7)
+                                    {
+                                        board.castle &= ~(BlackKingCastle);
+                                    }
+
+                                }
+                                else
+                                {
+                                    if (getRank(move.To) == 0)
+                                    {
+                                        board.castle &= ~(WhiteKingCastle);
+                                    }
+
+                                }
+                            }
+                        }
+                        int captured_piece = board.mailbox[move.To];
+                        //update piece bitboard
+                        board.bitboards[move.Piece] &= ~(1UL << move.From);
+                        board.bitboards[get_piece(Piece.b, side)] |= (1UL << move.To);
+
+                        board.bitboards[captured_piece] &= ~(1UL << move.To);
+
+                        //update moved piece occupancy
+                        board.occupancies[side] &= ~(1UL << move.From);
+                        board.occupancies[side] |= (1UL << move.To);
+
+                        //update captured piece occupancy
+                        board.occupancies[1 - side] &= ~(1UL << move.To);
+
+                        //update both occupancy
+                        board.occupancies[Side.Both] &= ~(1UL << move.From);
+                        board.occupancies[Side.Both] |= (1UL << move.To);
+
+                        //update mailbox
+                        board.mailbox[move.From] = -1;
+                        board.mailbox[move.To] = get_piece(Piece.b, side);
+
+
+                        Zobrist ^= PIECES[move.Piece][move.From];
+                        Zobrist ^= PIECES[get_piece(Piece.b, side)][move.To];
+                        Zobrist ^= PIECES[captured_piece][move.To];
+
+                        break;
+                    }
+                case knight_promo_capture:
+                    {
+                        if (board.mailbox[move.To] == get_piece(Piece.r, 1 - side))
+                        {
+                            if (getFile(move.To) == 0) // a file rook captured; delete queen castle
+                            {
+                                if (side == Side.White) // have to delete black queen castle
+                                {
+                                    if (getRank(move.To) == 7)
+                                    {
+                                        board.castle &= ~(BlackQueenCastle);
+                                    }
+
+                                    //Console.WriteLine("here");
+                                }
+                                else
+                                {
+                                    if (getRank(move.To) == 0)
+                                    {
+                                        board.castle &= ~(WhiteQueenCastle);
+                                    }
+
+                                }
+                            }
+                            else if (getFile(move.To) == 7) // h file rook captured; delete king castle
+                            {
+                                //Console.WriteLine("H capture");
+                                if (side == Side.White) // have to delete black king castle
+                                {
+                                    if (getRank(move.To) == 7)
+                                    {
+                                        board.castle &= ~(BlackKingCastle);
+                                    }
+
+                                }
+                                else
+                                {
+                                    if (getRank(move.To) == 0)
+                                    {
+                                        board.castle &= ~(WhiteKingCastle);
+                                    }
+
+                                }
+                            }
+                        }
+                        int captured_piece = board.mailbox[move.To];
+                        //update piece bitboard
+                        board.bitboards[move.Piece] &= ~(1UL << move.From);
+                        board.bitboards[get_piece(Piece.n, side)] |= (1UL << move.To);
+
+                        board.bitboards[captured_piece] &= ~(1UL << move.To);
+
+                        //update moved piece occupancy
+                        board.occupancies[side] &= ~(1UL << move.From);
+                        board.occupancies[side] |= (1UL << move.To);
+
+                        //update captured piece occupancy
+                        board.occupancies[1 - side] &= ~(1UL << move.To);
+
+                        //update both occupancy
+                        board.occupancies[Side.Both] &= ~(1UL << move.From);
+                        board.occupancies[Side.Both] |= (1UL << move.To);
+
+                        //update mailbox
+                        board.mailbox[move.From] = -1;
+                        board.mailbox[move.To] = get_piece(Piece.n, side);
+
+                        Zobrist ^= PIECES[move.Piece][move.From];
+                        Zobrist ^= PIECES[get_piece(Piece.n, side)][move.To];
+                        Zobrist ^= PIECES[captured_piece][move.To];
+
+                        break;
+                    }
+                case ep_capture:
+                    {
+                        int capture_square;
+                        if (side == Side.White)
+                        {
+                            capture_square = move.To + 8;
                         }
                         else
                         {
-                            if (getRank(move.To) == 0)
-                            {
-                                board.castle &= ~(WhiteQueenCastle);
-                            }
-
+                            capture_square = move.To - 8;
                         }
+
+
+                        int captured_piece = board.mailbox[capture_square];
+                        //update piece bitboard
+                        board.bitboards[move.Piece] &= ~(1UL << move.From);
+                        board.bitboards[move.Piece] |= (1UL << move.To);
+
+                        board.bitboards[captured_piece] &= ~(1UL << capture_square);
+
+                        //update moved piece occupancy
+                        board.occupancies[side] &= ~(1UL << move.From);
+                        board.occupancies[side] |= (1UL << move.To);
+
+                        //update captured piece occupancy
+                        board.occupancies[1 - side] &= ~(1UL << capture_square);
+
+                        //update both occupancy
+                        board.occupancies[Side.Both] &= ~(1UL << move.From);
+                        board.occupancies[Side.Both] &= ~(1UL << capture_square);
+                        board.occupancies[Side.Both] |= (1UL << move.To);
+
+                        //update mailbox
+                        board.mailbox[move.From] = -1;
+                        board.mailbox[move.To] = move.Piece;
+                        board.mailbox[capture_square] = -1;
+
+                        Zobrist ^= PIECES[move.Piece][move.From];
+                        Zobrist ^= PIECES[move.Piece][move.To];
+                        Zobrist ^= PIECES[captured_piece][capture_square];
+                        break;
                     }
-                    else if (getFile(move.To) == 7) // h file rook captured; delete king castle
-                    {
-                        //Console.WriteLine("H capture");
-                        if (side == Side.White) // have to delete black king castle
-                        {
-                            if (getRank(move.To) == 7)
-                            {
-                                board.castle &= ~(BlackKingCastle);
-                            }
-
-                        }
-                        else
-                        {
-                            if (getRank(move.To) == 0)
-                            {
-                                board.castle &= ~(WhiteKingCastle);
-                            }
-
-                        }
-                    }
-                }
-                int captured_piece = board.mailbox[move.To];
-                //update piece bitboard
-                board.bitboards[move.Piece] &= ~(1UL << move.From);
-                board.bitboards[get_piece(Piece.q, side)] |= (1UL << move.To);
-
-                board.bitboards[captured_piece] &= ~(1UL << move.To);
-
-                //update moved piece occupancy
-                board.occupancies[side] &= ~(1UL << move.From);
-                board.occupancies[side] |= (1UL << move.To);
-
-                //update captured piece occupancy
-                board.occupancies[1 - side] &= ~(1UL << move.To);
-
-                //update both occupancy
-                board.occupancies[Side.Both] &= ~(1UL << move.From);
-                board.occupancies[Side.Both] |= (1UL << move.To);
-
-                //update mailbox
-                board.mailbox[move.From] = -1;
-                board.mailbox[move.To] = get_piece(Piece.q, side);
-
-                Zobrist ^= PIECES[move.Piece][move.From];
-                Zobrist ^= PIECES[get_piece(Piece.q, side)][move.To];
-                Zobrist ^= PIECES[captured_piece][move.To];
-
             }
-            else if (move.Type == rook_promo_capture)
-            {
-                if (board.mailbox[move.To] == get_piece(Piece.r, 1 - side))
-                {
-                    if (getFile(move.To) == 0) // a file rook captured; delete queen castle
-                    {
-                        if (side == Side.White) // have to delete black queen castle
-                        {
-                            if (getRank(move.To) == 7)
-                            {
-                                board.castle &= ~(BlackQueenCastle);
-                            }
-
-                            //Console.WriteLine("here");
-                        }
-                        else
-                        {
-                            if (getRank(move.To) == 0)
-                            {
-                                board.castle &= ~(WhiteQueenCastle);
-                            }
-
-                        }
-                    }
-                    else if (getFile(move.To) == 7) // h file rook captured; delete king castle
-                    {
-                        //Console.WriteLine("H capture");
-                        if (side == Side.White) // have to delete black king castle
-                        {
-                            if (getRank(move.To) == 7)
-                            {
-                                board.castle &= ~(BlackKingCastle);
-                            }
-
-                        }
-                        else
-                        {
-                            if (getRank(move.To) == 0)
-                            {
-                                board.castle &= ~(WhiteKingCastle);
-                            }
-
-                        }
-                    }
-                }
-                int captured_piece = board.mailbox[move.To];
-                //update piece bitboard
-                board.bitboards[move.Piece] &= ~(1UL << move.From);
-                board.bitboards[get_piece(Piece.r, side)] |= (1UL << move.To);
-
-                board.bitboards[captured_piece] &= ~(1UL << move.To);
-
-                //update moved piece occupancy
-                board.occupancies[side] &= ~(1UL << move.From);
-                board.occupancies[side] |= (1UL << move.To);
-
-                //update captured piece occupancy
-                board.occupancies[1 - side] &= ~(1UL << move.To);
-
-                //update both occupancy
-                board.occupancies[Side.Both] &= ~(1UL << move.From);
-                board.occupancies[Side.Both] |= (1UL << move.To);
-
-                //update mailbox
-                board.mailbox[move.From] = -1;
-                board.mailbox[move.To] = get_piece(Piece.r, side);
-
-                Zobrist ^= PIECES[move.Piece][move.From];
-                Zobrist ^= PIECES[get_piece(Piece.r, side)][move.To];
-                Zobrist ^= PIECES[captured_piece][move.To];
-
-            }
-            else if (move.Type == bishop_promo_capture)
-            {
-                if (board.mailbox[move.To] == get_piece(Piece.r, 1 - side))
-                {
-                    if (getFile(move.To) == 0) // a file rook captured; delete queen castle
-                    {
-                        if (side == Side.White) // have to delete black queen castle
-                        {
-                            if (getRank(move.To) == 7)
-                            {
-                                board.castle &= ~(BlackQueenCastle);
-                            }
-
-                            //Console.WriteLine("here");
-                        }
-                        else
-                        {
-                            if (getRank(move.To) == 0)
-                            {
-                                board.castle &= ~(WhiteQueenCastle);
-                            }
-
-                        }
-                    }
-                    else if (getFile(move.To) == 7) // h file rook captured; delete king castle
-                    {
-                        //Console.WriteLine("H capture");
-                        if (side == Side.White) // have to delete black king castle
-                        {
-                            if (getRank(move.To) == 7)
-                            {
-                                board.castle &= ~(BlackKingCastle);
-                            }
-
-                        }
-                        else
-                        {
-                            if (getRank(move.To) == 0)
-                            {
-                                board.castle &= ~(WhiteKingCastle);
-                            }
-
-                        }
-                    }
-                }
-                int captured_piece = board.mailbox[move.To];
-                //update piece bitboard
-                board.bitboards[move.Piece] &= ~(1UL << move.From);
-                board.bitboards[get_piece(Piece.b, side)] |= (1UL << move.To);
-
-                board.bitboards[captured_piece] &= ~(1UL << move.To);
-
-                //update moved piece occupancy
-                board.occupancies[side] &= ~(1UL << move.From);
-                board.occupancies[side] |= (1UL << move.To);
-
-                //update captured piece occupancy
-                board.occupancies[1 - side] &= ~(1UL << move.To);
-
-                //update both occupancy
-                board.occupancies[Side.Both] &= ~(1UL << move.From);
-                board.occupancies[Side.Both] |= (1UL << move.To);
-
-                //update mailbox
-                board.mailbox[move.From] = -1;
-                board.mailbox[move.To] = get_piece(Piece.b, side);
 
 
-                Zobrist ^= PIECES[move.Piece][move.From];
-                Zobrist ^= PIECES[get_piece(Piece.b, side)][move.To];
-                Zobrist ^= PIECES[captured_piece][move.To];
-            }
-            else if (move.Type == knight_promo_capture)
-            {
-                if (board.mailbox[move.To] == get_piece(Piece.r, 1 - side))
-                {
-                    if (getFile(move.To) == 0) // a file rook captured; delete queen castle
-                    {
-                        if (side == Side.White) // have to delete black queen castle
-                        {
-                            if (getRank(move.To) == 7)
-                            {
-                                board.castle &= ~(BlackQueenCastle);
-                            }
-
-                            //Console.WriteLine("here");
-                        }
-                        else
-                        {
-                            if (getRank(move.To) == 0)
-                            {
-                                board.castle &= ~(WhiteQueenCastle);
-                            }
-
-                        }
-                    }
-                    else if (getFile(move.To) == 7) // h file rook captured; delete king castle
-                    {
-                        //Console.WriteLine("H capture");
-                        if (side == Side.White) // have to delete black king castle
-                        {
-                            if (getRank(move.To) == 7)
-                            {
-                                board.castle &= ~(BlackKingCastle);
-                            }
-
-                        }
-                        else
-                        {
-                            if (getRank(move.To) == 0)
-                            {
-                                board.castle &= ~(WhiteKingCastle);
-                            }
-
-                        }
-                    }
-                }
-                int captured_piece = board.mailbox[move.To];
-                //update piece bitboard
-                board.bitboards[move.Piece] &= ~(1UL << move.From);
-                board.bitboards[get_piece(Piece.n, side)] |= (1UL << move.To);
-
-                board.bitboards[captured_piece] &= ~(1UL << move.To);
-
-                //update moved piece occupancy
-                board.occupancies[side] &= ~(1UL << move.From);
-                board.occupancies[side] |= (1UL << move.To);
-
-                //update captured piece occupancy
-                board.occupancies[1 - side] &= ~(1UL << move.To);
-
-                //update both occupancy
-                board.occupancies[Side.Both] &= ~(1UL << move.From);
-                board.occupancies[Side.Both] |= (1UL << move.To);
-
-                //update mailbox
-                board.mailbox[move.From] = -1;
-                board.mailbox[move.To] = get_piece(Piece.n, side);
-
-                Zobrist ^= PIECES[move.Piece][move.From];
-                Zobrist ^= PIECES[get_piece(Piece.n, side)][move.To];
-                Zobrist ^= PIECES[captured_piece][move.To];
-
-
-            }
-            else if (move.Type == ep_capture)
-            {
-                int capture_square;
-                if (side == Side.White)
-                {
-                    capture_square = move.To + 8;
-                }
-                else
-                {
-                    capture_square = move.To - 8;
-                }
-
-
-                int captured_piece = board.mailbox[capture_square];
-                //update piece bitboard
-                board.bitboards[move.Piece] &= ~(1UL << move.From);
-                board.bitboards[move.Piece] |= (1UL << move.To);
-
-                board.bitboards[captured_piece] &= ~(1UL << capture_square);
-
-                //update moved piece occupancy
-                board.occupancies[side] &= ~(1UL << move.From);
-                board.occupancies[side] |= (1UL << move.To);
-
-                //update captured piece occupancy
-                board.occupancies[1 - side] &= ~(1UL << capture_square);
-
-                //update both occupancy
-                board.occupancies[Side.Both] &= ~(1UL << move.From);
-                board.occupancies[Side.Both] &= ~(1UL << capture_square);
-                board.occupancies[Side.Both] |= (1UL << move.To);
-
-                //update mailbox
-                board.mailbox[move.From] = -1;
-                board.mailbox[move.To] = move.Piece;
-                board.mailbox[capture_square] = -1;
-
-                Zobrist ^= PIECES[move.Piece][move.From];
-                Zobrist ^= PIECES[move.Piece][move.To];
-                Zobrist ^= PIECES[captured_piece][capture_square];
-                
-            }
             if (board.enpassent != lastEp) //enpassent updated
             {
                 if (lastEp != Square.no_sq)
@@ -2357,8 +2404,11 @@ namespace Turbulence
             return queen_attacks;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int get_piece(int piece, int col)
         {
+            //bool isBlack = piece >= 6;
+            //return (col == Side.White) ? (isBlack ? piece - 6 : piece) : (isBlack ? piece : piece + 6);
             if (col == Side.White)
             {
                 //Piece.r
