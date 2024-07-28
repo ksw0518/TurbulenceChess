@@ -653,7 +653,6 @@ namespace Turbulence
             {
                 int piece = board.mailbox[i];
 
-
                 if (piece == -1) continue;
                 zobrist ^= PIECES[piece][i];
             }
