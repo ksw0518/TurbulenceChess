@@ -2,7 +2,8 @@
 
 ------Turbulence chess engine------
 - Turbulence is a still-in-develop, uci chess engine by ksw0518
-- (lichess link)[https://lichess.org/@/turbulencebot]
+
+- [lichess link](https://lichess.org/@/turbulencebot) 
 
 - still in development
 
