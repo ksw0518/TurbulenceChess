@@ -14,7 +14,7 @@ nps(at startpos)
 - search nps = ~1.5mnps
 
 
-## <applied techniques>
+## applied techniques
 ### Move generation
 - bitboard
 - magic bitboard
