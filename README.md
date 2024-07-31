@@ -1,16 +1,16 @@
 # Turbulence
 
 ------Turbulence chess engine------
-Turbulence is a still-in-develop, uci chess engine by ksw0518
-(lichess link)[https://lichess.org/@/turbulencebot]
+- Turbulence is a still-in-develop, uci chess engine by ksw0518
+- (lichess link)[https://lichess.org/@/turbulencebot]
 
-still in development
+- still in development
 
 ## approximate NPS(node per second)
 nps(at startpos)
--perft nps without bulk = ~15mnps
--perft nps with bulk = ~50mnps
--search nps = ~1.5mnps
+- perft nps without bulk = ~15mnps
+- perft nps with bulk = ~50mnps
+- search nps = ~1.5mnps
 
 
 ## <applied techniques>
