@@ -1,7 +1,7 @@
 # Turbulence
 
 ------Turbulence chess engine------
-- Turbulence is a still-in-develop, uci chess engine in c#
+- Turbulence is a still-in-develop, uci chess engine in `c#`
 
 - [lichess link](https://lichess.org/@/turbulencebot) 
 
