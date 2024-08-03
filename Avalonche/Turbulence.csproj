@@ -1,21 +1,35 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <PlatformTarget>x64</PlatformTarget>
-    <BaseOutputPath>C:\Users\choij\OneDrive\바탕 화면\Turbulence_build</BaseOutputPath>
-    <Configurations>Debug;Release</Configurations>
-  </PropertyGroup>
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<TargetFramework>net8.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<PlatformTarget>x64</PlatformTarget>
+		<BaseOutputPath>C:\Users\choij\OneDrive\바탕 화면\Turbulence_build</BaseOutputPath>
+		<Configurations>Debug;Release</Configurations>
+		<Deterministic>true</Deterministic>
+	</PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <Optimize>false</Optimize>
-  </PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug'">
+		<Optimize>false</Optimize>
+		<DebugType>full</DebugType>
+		<Deterministic>true</Deterministic>
+	</PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <Optimize>true</Optimize>
-  </PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release'">
+		<Optimize>true</Optimize>
+		<DebugType>pdbonly</DebugType>
+		<CheckForOverflowUnderflow>false</CheckForOverflowUnderflow>
+		<Prefer32Bit>false</Prefer32Bit>
+		<PublishTrimmed>true</PublishTrimmed>
+		<ReadyToRun>true</ReadyToRun>
+		<TieredCompilation>true</TieredCompilation>
+		<Deterministic>true</Deterministic>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<PublishAot>true</PublishAot>
+	</PropertyGroup>
 
 </Project>

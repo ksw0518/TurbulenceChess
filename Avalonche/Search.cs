@@ -222,7 +222,7 @@ namespace Turbulence
             //Console.WriteLine(get_piece(board.mailbox[from], Side.White));
             return MVVLVA_T[MVVLVA_PieceInd[get_piece(board.mailbox[from], Side.White)]][MVVLVA_PieceInd[get_piece(board.mailbox[to], Side.White)]];
         }
-        static int negaMax(ref Board board, int depth, int alpha, int beta, ref int[] pv_length, ref Move[][] pv_table, Move lmove, ulong ZobristKey, ref Transposition[] TTtable, ref List<ulong> threeFoldRep )
+        static int negaMax(ref Board board, int depth, int alpha, int beta, ref int[] pv_length, ref Move[][] pv_table, Move lmove, ulong ZobristKey, ref Transposition[] TTtable, ref List<ulong> threeFoldRep)
         {
             if (time_ellapsed.ElapsedMilliseconds >= THINK_TIME)
             {
@@ -234,24 +234,39 @@ namespace Turbulence
             {
                 //Console.WriteLine(time_ellapsed.ElapsedMilliseconds);
                 IS_SEARCH_STOPPED = true;
-                
+
             }
             if (IS_SEARCH_STOPPED)
             {
                 isSuccess = false;
                 return 0;
             }
-            if(board.halfmove >= 100)
+            if (board.halfmove >= 100)
             {
+                return 0;
+            }
+            //Console.WriteLine("a");
+            //printMove(lmove); Console.Write("\n");
+            //for (int i = 0; i < threeFoldRep.Count; i++)
+            //{
+            //    Console.WriteLine(threeFoldRep[i]);
+            //}
+
+            //Console.Write("\n");
+            if (DetectThreefold(ref threeFoldRep))
+            {
+                //Console.WriteLine("threefold");
+               
                 return 0;
             }
             int score;
 
             int hashf = HASH_ALPHA;
+
             Move TT_Best_Move;
             score = probeHash(depth, alpha, beta, ref TTtable, ZobristKey, out TT_Best_Move);
             if (score != valUNKNOWN)
-            { 
+            {
                 //if (ply == 0)
                 //{
                 //    Console.WriteLine("depth 1");
@@ -259,9 +274,8 @@ namespace Turbulence
                 //    pv_table[ply][ply] = TT_Best_Move;
                 //}
                 TT_hit++;
-                return score;   
+                return score;
             }
-
 
             pv_length[ply] = ply;
             if (depth == 0)
@@ -275,6 +289,7 @@ namespace Turbulence
                 
                 return quiescence;
             }
+
             //if (lmove.To == Square.d4 && lmove.From == Square.f5)
             //{
             //    Console.WriteLine(DetectThreefold(ref threeFoldRep));
@@ -284,11 +299,7 @@ namespace Turbulence
             //    }
             //}
 
-            if (DetectThreefold(ref threeFoldRep))
-            {
-                //Console.WriteLine("threefold");
-                return 0;
-            }
+
             int best_score = int.MinValue;
            
             List<Move> movelist = new();
@@ -337,9 +348,11 @@ namespace Turbulence
                 movelist.Insert(0, killer2);
             }
             int org_halfmove = board.halfmove;
-
+            List<ulong> threefold_org = new List<ulong>(threeFoldRep);
+            bool isRepClear = false;
             for (int i = 0; i < movelist.Count; i++)
             {
+                isRepClear = false;
                 if (IS_SEARCH_STOPPED)
                 {
                     isSuccess = false;
@@ -354,7 +367,11 @@ namespace Turbulence
 
                 if (isMoveIrreversible(movelist[i]))
                 {
+                    //Console.WriteLine("tfr_clear");
+                    //printMove(movelist[i]);
+                    //Console.Write("\n");
                     threeFoldRep.Clear();
+                    isRepClear = true;
                     board.halfmove = 0;
                 }
 
@@ -375,6 +392,14 @@ namespace Turbulence
                 board.castle = lastCastle;
                 board.side = lastside;
                 ZobristKey = lastZobrist;
+                if(isRepClear)
+                {
+                    threeFoldRep = new List<ulong>(threefold_org);
+                }
+                else
+                {
+                    threeFoldRep.RemoveAt(threeFoldRep.Count - 1);
+                }
                 
                 
                 if (score > best_score)
@@ -396,7 +421,11 @@ namespace Turbulence
                     }
                     pv_length[ply] = pv_length[ply + 1];
                 }
-
+                if (IS_SEARCH_STOPPED)
+                {
+                    isSuccess = false;
+                    return 0;
+                }
                 if (best_score >= beta)
                 {
 
@@ -515,8 +544,10 @@ namespace Turbulence
                 isSuccess = false;
                 return 0;
             }
-            q_count++;
             int stand_pat = EvalPos(board);
+            //return stand_pat;
+            q_count++;
+
             if (stand_pat >= beta)
             {
                 return beta;

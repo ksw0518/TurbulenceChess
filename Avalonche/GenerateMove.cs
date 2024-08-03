@@ -13,8 +13,21 @@ using System.Runtime.CompilerServices;
 
 namespace Turbulence
 {
+
     static class GenerateMove
     {
+        //public struct Movelist
+        //{
+        //    Move[] list;
+        //    int length;
+
+        //    public Movelist()
+        //    {
+        //        length = 0;
+        //        list = new Move[218];
+        //    }
+        //}
+        
         const int promotionFlag = 0x1000;
         const int captureFlag = 0x0100;
         const int special1Flag = 0x0010;
@@ -36,7 +49,8 @@ namespace Turbulence
         public const int queen_promo_capture = queen_promo | capture;
 
 
-
+        public static int[] Side_value = { 0, 6 };
+        public static int[] Get_Whitepiece = { 0, 1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5 };
 
         //ulong[] bitboards = new ulong[12];
         //ulong[] occupancies = new ulong[3];
@@ -44,7 +58,7 @@ namespace Turbulence
         //int enpassent = (int)Square.no_sq;
         //ulong castle;
 
-        //uint state = 1804289383;
+                //uint state = 1804289383;
         const ulong NotAFile = 18374403900871474942;
         const ulong NotHFile = 9187201950435737471;
         const ulong NotHGFile = 4557430888798830399;
@@ -406,7 +420,7 @@ namespace Turbulence
             //Console.WriteLine(board.side);
 
             ulong lastCastle = board.castle;
-            int lastEp = board.enpassent; 
+            int lastEp = board.enpassent;
             board.enpassent = (int)Square.no_sq;
             int side = board.side;
             // change castling flag
@@ -418,7 +432,7 @@ namespace Turbulence
                     board.castle &= ~WhiteQueenCastle;
 
                     //PIECES
-                   
+
                     //Zobrist ^= W_CASTLING_RIGHTS[get_castle(WhiteKingCastle | WhiteQueenCastle, side)];
 
                 }
@@ -481,16 +495,16 @@ namespace Turbulence
 
                         //update enpassent square
 
-                            if (side == Side.White)
-                            {
-                                board.enpassent = move.To + 8;
-                            }
-                            else
-                            {
-                                board.enpassent = move.To - 8;
-                            }
+                        if (side == Side.White)
+                        {
+                            board.enpassent = move.To + 8;
+                        }
+                        else
+                        {
+                            board.enpassent = move.To - 8;
+                        }
 
-                        
+
 
                         Zobrist ^= PIECES[move.Piece][move.From];
                         Zobrist ^= PIECES[move.Piece][move.To];
@@ -1132,6 +1146,7 @@ namespace Turbulence
                         Zobrist ^= PIECES[captured_piece][capture_square];
                         break;
                     }
+
             }
 
 
@@ -1176,6 +1191,8 @@ namespace Turbulence
             //    Console.WriteLine("hash doens't match");
             //}
         }
+
+
         public static void UnmakeMove(ref Board board, Move move, int captured_piece)
         {
 
@@ -1722,9 +1739,9 @@ namespace Turbulence
 
         static void Generate_Pawn_Moves(ref List<Move> MoveList, Board board, ulong attackers, ulong move_mask, ulong capture_mask, List<ulong> pin_ray, List<ulong> pinned_piece, bool isCapture)
         {
-            int check_num = count_bits(attackers);
+            //int check_num = ;
 
-            if (check_num >= 2) return;
+            if (count_bits(attackers) >= 2) return;
 
 
             int side = board.side;
@@ -1733,6 +1750,7 @@ namespace Turbulence
             ulong PawnBB = (board.side == Side.White) ? board.bitboards[Piece.P] : board.bitboards[Piece.p];
             List<int> pinned = new();
             List<int> pinned_Loc = new();
+            ulong pin_mask, BB, pawnPromo, pawnOnePush, pawnTwoPush, pawn_capture, pawn_capture_mask, enpassent;
             for (int i = 0; i < pin_ray.Count; i++)
             {
                 if ((PawnBB & pinned_piece[i]) != 0) // found pinned bishop
@@ -1749,19 +1767,24 @@ namespace Turbulence
             {
                 int From = get_ls1b(PawnBB);
                 int pinnedloc = pinned_Loc.IndexOf(From);
-                ulong pin_mask = 0xFFFFFFFFFFFFFFFF;
-                if (pinnedloc != -1)
+               
+                if (pinnedloc == -1)
                 {
-                    pin_mask = pin_ray[pinned[pinnedloc]];
+                    pin_mask = 0xFFFFFFFFFFFFFFFF;
                     //PrintBitboard(pin_mask);
                 }
-                ulong BB = 1UL << From;
+                else
+                {
+                    pin_mask = pin_ray[pinned[pinnedloc]];
+
+                }
+                BB = 1UL << From;
                 if ((board.side == Side.White) ? (From >= (int)Square.a7 && From <= (int)Square.h7) : (From >= (int)Square.a2 && From <= (int)Square.h2))
                 {
                     // =======promotion======= //
                     if (!isCapture)
                     {
-                        ulong pawnPromo = (((side == Side.White) ? (BB >> 8) : (BB << 8)) & ~board.occupancies[Side.Both]) & move_mask & pin_mask;
+                        pawnPromo = (((side == Side.White) ? (BB >> 8) : (BB << 8)) & ~board.occupancies[Side.Both]) & move_mask & pin_mask;
                         //bool isPossible = pawnOnePush != 0;
 
 
@@ -1782,8 +1805,8 @@ namespace Turbulence
 
                     
                     // =======promo_capture======= //
-                    ulong pawn_capture_mask = pawn_attacks[board.side, From];
-                    ulong pawn_capture = ((board.side == Side.White) ? pawn_capture_mask & board.occupancies[Side.Black] : pawn_capture_mask & board.occupancies[Side.White]) & (move_mask | capture_mask) & pin_mask;
+                    pawn_capture_mask = pawn_attacks[board.side, From];
+                    pawn_capture = ((board.side == Side.White) ? pawn_capture_mask & board.occupancies[Side.Black] : pawn_capture_mask & board.occupancies[Side.White]) & (move_mask | capture_mask) & pin_mask;
 
                     for (; pawn_capture != 0;)
                     {
@@ -1805,7 +1828,7 @@ namespace Turbulence
                     // =======pawn one square push======= //
                     if (!isCapture)
                     {
-                        ulong pawnOnePush = (((side == Side.White) ? (BB >> 8) : (BB << 8)) & ~board.occupancies[Side.Both]) & move_mask & pin_mask;
+                        pawnOnePush = (((side == Side.White) ? (BB >> 8) : (BB << 8)) & ~board.occupancies[Side.Both]) & move_mask & pin_mask;
                         bool isPossible = (((side == Side.White) ? (BB >> 8) : (BB << 8)) & ~board.occupancies[Side.Both]) != 0;
 
 
@@ -1818,7 +1841,7 @@ namespace Turbulence
 
                         // =======pawn two square push======= //
 
-                        ulong pawnTwoPush = 0;
+                        pawnTwoPush = 0;
                         if (isPossible)
                         {
                             if ((board.side == Side.White) ? (From >= (int)Square.a2 && From <= (int)Square.h2) : (From >= (int)Square.a7 && From <= (int)Square.h7))//pawn on second rank
@@ -1840,8 +1863,8 @@ namespace Turbulence
                         }
                     }
                     // =======pawn capture======= //
-                    ulong pawn_capture_mask = pawn_attacks[board.side, From];
-                    ulong pawn_capture = ((board.side == Side.White) ? pawn_capture_mask & board.occupancies[Side.Black] : pawn_capture_mask & board.occupancies[Side.White]) & (move_mask | capture_mask) & pin_mask;
+                    pawn_capture_mask = pawn_attacks[board.side, From];
+                    pawn_capture = ((board.side == Side.White) ? pawn_capture_mask & board.occupancies[Side.Black] : pawn_capture_mask & board.occupancies[Side.White]) & (move_mask | capture_mask) & pin_mask;
 
                     for (; pawn_capture != 0;)
                     {
@@ -1851,7 +1874,7 @@ namespace Turbulence
                     }
 
                     // =======pawn Enpassent =======//
-                    ulong enpassent = 0;
+                    enpassent = 0;
                     if (board.enpassent != (int)Square.no_sq) // enpassent possible
                     {
                         //Console.WriteLine("here");
@@ -2407,6 +2430,8 @@ namespace Turbulence
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int get_piece(int piece, int col)
         {
+            return Get_Whitepiece[piece] + Side_value[col];
+            //return 1;
             //bool isBlack = piece >= 6;
             //return (col == Side.White) ? (isBlack ? piece - 6 : piece) : (isBlack ? piece : piece + 6);
             if (col == Side.White)
