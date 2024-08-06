@@ -2,18 +2,13 @@
 
 ------Turbulence chess engine------
 - Turbulence is a still-in-develop, uci chess engine in `c#`
+- it's really terrible probably you can even beat it
 
 - [lichess link](https://lichess.org/@/turbulencebot) 
 
 - still in development
 
-## approximate NPS(node per second)
-nps(at startpos)
-- perft nps without bulk = ~15mnps
-- perft nps with bulk = ~50mnps
-- search nps = ~1.5mnps
-
-
+## it's really terrible probably you can even beat it
 ## applied techniques
 ### Move generation
 - bitboard
