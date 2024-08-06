@@ -29,7 +29,7 @@ namespace Turbulence
         }
         //public static int main_halfmove;
         public static int TT_hit = 0;
-        public const int TT_SIZE = 33554432;//8388608
+        public const int TT_SIZE = 33554432;//33554432
         static Transposition[] TT_Table = new Transposition[TT_SIZE];
 
         static Transposition_Perft[] TT_Table_perft = new Transposition_Perft[TT_SIZE];

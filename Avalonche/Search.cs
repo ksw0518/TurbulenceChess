@@ -300,7 +300,7 @@ namespace Turbulence
             //}
 
 
-            int best_score = int.MinValue;
+            int best_score = minusINFINITY;
            
             List<Move> movelist = new();
             Generate_Legal_Moves(ref movelist, ref board, false);
