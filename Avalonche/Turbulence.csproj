@@ -9,12 +9,14 @@
 		<BaseOutputPath>C:\Users\choij\OneDrive\바탕 화면\Turbulence_build</BaseOutputPath>
 		<Configurations>Debug;Release</Configurations>
 		<Deterministic>true</Deterministic>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug'">
 		<Optimize>false</Optimize>
 		<DebugType>full</DebugType>
 		<Deterministic>true</Deterministic>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release'">
@@ -26,6 +28,7 @@
 		<ReadyToRun>true</ReadyToRun>
 		<TieredCompilation>true</TieredCompilation>
 		<Deterministic>true</Deterministic>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 	</PropertyGroup>
 
 	<PropertyGroup>

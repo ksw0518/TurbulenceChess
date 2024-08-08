@@ -29,7 +29,7 @@ namespace Turbulence
         }
         //public static int main_halfmove;
         public static int TT_hit = 0;
-        public const int TT_SIZE = 33554432;//33554432
+        public const int TT_SIZE = 1;//33554432
         static Transposition[] TT_Table = new Transposition[TT_SIZE];
 
         static Transposition_Perft[] TT_Table_perft = new Transposition_Perft[TT_SIZE];
@@ -530,8 +530,10 @@ namespace Turbulence
                     }
                     //Console.WriteLine(timeRemainingWhiteMs);
                     THINK_TIME = ChooseThinkTime(myRemTime, myIncTime);
-                    //Console.WriteLine(THINK_TIME);
+                   Console.WriteLine(THINK_TIME);
+                    //Console.WriteLine(timeRemainingWhiteMs);
                     int eval = StartSearch(ref main_board, 64, ref pv_length, ref pv_table, main_Zobrist, ref TT_Table, ref Repetition_table);
+
 
                     //LogToFile("Thinking for: " + thinkTime + " ms.");
                     //player.ThinkTimed(thinkTime);
@@ -547,12 +549,13 @@ namespace Turbulence
             {
                 Environment.Exit(Environment.ExitCode);
             }
+
         }
 
         int ChooseThinkTime(int time, int incre)
         {
             
-            return (int)(time / 20 + incre / 2);
+            return Math.Min((time / 20 + incre / 2), (time * 70/100));
         }
         static int get_hash_Key(ulong zobrist, int hashsize)
         {
@@ -604,24 +607,24 @@ namespace Turbulence
                 MakeMove(ref board, movelist[i], ref Zobrist);
                 ulong added_nodes = perft(depth - 1, ref board, Zobrist);
 
-                ulong zobrish_fordebug = 0;
+                //ulong zobrish_fordebug = 0;
                 //Get_Zobrist(ref board, ref zobrish_fordebug);
-                //if(zobrish_fordebug != Zobrist)
+                //if (zobrish_fordebug != Zobrist)
                 //{
                 //    Console.WriteLine("bug");
-                //    Console.WriteLine("key should be " );
+                //    Console.WriteLine("key should be ");
                 //    PrintBitboard(zobrish_fordebug);
-                //    Console.WriteLine("key is :" );
+                //    Console.WriteLine("key is :");
                 //    PrintBitboard(Zobrist);
                 //}
-                //if(lastCastle != )
-                //if (movelist[i].From == (int)Square.a2 && movelist[i].To == (int)Square.a3 && movelist[i].Type == quiet_move)
-                //{
-                //    List<Move> test = new();
-                //    Generate_Legal_Moves(ref test, ref board);
-                //    Console.WriteLine(test.Count);
-                //    //PrintBoards(board);
-                //}
+                //if (lastCastle != )
+                //    if (movelist[i].From == (int)Square.a2 && movelist[i].To == (int)Square.a3 && movelist[i].Type == quiet_move)
+                //    {
+                //        List<Move> test = new();
+                //        Generate_Legal_Moves(ref test, ref board);
+                //        Console.WriteLine(test.Count);
+                //        PrintBoards(board);
+                //    }
                 if (depth == Perft_DEPTH)
                 {
 

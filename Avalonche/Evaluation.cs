@@ -225,7 +225,7 @@ namespace Turbulence
 
             if (board.mailbox[Square.d2] == get_piece(Piece.p, Side.White))
             {
-                if (getSide(board.mailbox[Square.d3]) == Side.White) //white piece blocking center pawn
+                if (board.mailbox[Square.d3] != -1 && getSide(board.mailbox[Square.d3]) == Side.White) //white piece blocking center pawn
                 {
                     MG_score -= 100;
                 }
@@ -233,7 +233,7 @@ namespace Turbulence
 
             if (board.mailbox[Square.e2] == get_piece(Piece.p, Side.White))
             {
-                if (getSide(board.mailbox[Square.e3]) == Side.White) //white piece blocking center pawn
+                if (board.mailbox[Square.e3] != -1 && getSide(board.mailbox[Square.e3]) == Side.White) //white piece blocking center pawn
                 {
                     MG_score -= 100;
                 }
@@ -242,14 +242,14 @@ namespace Turbulence
 
             if (board.mailbox[Square.d7] == get_piece(Piece.p, Side.Black))
             {
-                if (getSide(board.mailbox[Square.d6]) == Side.Black) //black piece blocking center pawn
+                if (board.mailbox[Square.d6] != -1 && getSide(board.mailbox[Square.d6]) == Side.Black) //black piece blocking center pawn
                 {
                     MG_score += 100;
                 }
             }
             if (board.mailbox[Square.e7] == get_piece(Piece.p, Side.Black))
             {
-                if (getSide(board.mailbox[Square.e6]) == Side.Black) //black piece blocking center pawn
+                if (board.mailbox[Square.e6] != -1 && getSide(board.mailbox[Square.e6]) == Side.Black) //black piece blocking center pawn
                 {
                     MG_score += 100;
                 }

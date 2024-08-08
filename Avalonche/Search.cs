@@ -18,10 +18,11 @@ namespace Turbulence
 {
     public static class Search
     {
+        
         public const int valUNKNOWN = int.MinValue;
-        public const int HASH_EXACT = 0;
-        public const int HASH_ALPHA = 1;
-        public const int HASH_BETA = 2;
+        public const int EXACT = 0;
+        public const int LOWERBOUND = 1;
+        public const int UPPERBOUND = 2;
         static bool isSuccess = true;
         public static bool IS_SEARCH_STOPPED = false;
         
@@ -34,13 +35,22 @@ namespace Turbulence
         //    public int enpassent = (int)Square.no_sq;
         //    public ulong castle;
         //}
-        public class Transposition
+        public struct Transposition
         {
             public ulong key;
-            public int ply;
+            public int depth;
             public int flags;
             public int value;
             public Move bestMove;
+
+            public bool Compare(Transposition t2)
+            {
+                if (this.key == t2.key && this.depth == t2.depth && this.flags == t2.flags && this.value == t2.value && this.bestMove.Equals(t2.bestMove))
+                {
+                    return true;
+                }
+                return false;
+            }
         }
 
         //public struct ThreeFold
@@ -102,7 +112,7 @@ namespace Turbulence
                 q_count = 0;
                 //Console.WriteLine(i);
                 lastBmove = new Move(bestmove.From, bestmove.To, bestmove.Type, bestmove.Piece);
-                if (time_ellapsed.ElapsedMilliseconds >= THINK_TIME)
+                if (time_ellapsed.ElapsedMilliseconds > THINK_TIME)
                 {
                     //Console.WriteLine("quit");
                     
@@ -224,12 +234,7 @@ namespace Turbulence
         }
         static int negaMax(ref Board board, int depth, int alpha, int beta, ref int[] pv_length, ref Move[][] pv_table, Move lmove, ulong ZobristKey, ref Transposition[] TTtable, ref List<ulong> threeFoldRep)
         {
-            if (time_ellapsed.ElapsedMilliseconds >= THINK_TIME)
-            {
-                //Console.WriteLine(time_ellapsed.ElapsedMilliseconds);
-                IS_SEARCH_STOPPED = true;
-
-            }
+            
             if (time_ellapsed.ElapsedMilliseconds >= THINK_TIME)
             {
                 //Console.WriteLine(time_ellapsed.ElapsedMilliseconds);
@@ -259,28 +264,61 @@ namespace Turbulence
                
                 return 0;
             }
-            int score;
-
-            int hashf = HASH_ALPHA;
+            //int score;
+            int alphaOrg = alpha;
+            ulong OrgZobrist = ZobristKey;
+            //int hashf = HASH_ALPHA;
 
             Move TT_Best_Move;
-            score = probeHash(depth, alpha, beta, ref TTtable, ZobristKey, out TT_Best_Move);
-            if (score != valUNKNOWN)
+
+            Transposition ttEntry = transpositionTableLookup(ref TTtable, ZobristKey);
+
+            if(!ttEntry.Compare(default) && ttEntry.depth >= depth && ttEntry.key == ZobristKey)
             {
-                //if (ply == 0)
-                //{
-                //    Console.WriteLine("depth 1");
-                //    pv_length[ply] = ply;
-                //    pv_table[ply][ply] = TT_Best_Move;
-                //}
-                TT_hit++;
-                return score;
+                if (ttEntry.flags == EXACT)
+                {
+                    pv_table[ply][ply] = ttEntry.bestMove;
+
+                    for (int next_ply = ply + 1; next_ply < pv_length[ply + 1]; next_ply++)
+                    {
+                        pv_table[ply][next_ply] = new Move(0, 0, 0, 0);
+                    }
+                    pv_length[ply] = 1;
+                    return ttEntry.value;
+                }
+                else if(ttEntry.flags == LOWERBOUND)
+                {
+                    if(alpha < ttEntry.value) alpha = ttEntry.value;
+                }
+                else if(ttEntry.flags == UPPERBOUND)
+                {
+                    if(beta > ttEntry.value) beta = ttEntry.value;
+                }
+
+                if(alpha >= beta)
+                {
+                    return ttEntry.value;
+                }
             }
+
+            //score = 
+            //if (score != valUNKNOWN)
+            //{
+            //    //if (ply == 0)
+            //    //{
+            //    //    Console.WriteLine("depth 1");
+            //    //    pv_length[ply] = ply;
+            //    //    pv_table[ply][ply] = TT_Best_Move;
+            //    //}
+            //    TT_hit++;
+            //    return score;
+            //}
 
             pv_length[ply] = ply;
             if (depth == 0)
             {
-                nodes++;
+                //board.side = 1 - board.side;
+                //nodes++;
 
                 int quiescence = Quiescence(ref board, MAX_QDEPTH, alpha, beta, lmove, ZobristKey);
                 
@@ -300,13 +338,14 @@ namespace Turbulence
             //}
 
 
-            int best_score = minusINFINITY;
+            //int best_score = minusINFINITY;
            
             List<Move> movelist = new();
             Generate_Legal_Moves(ref movelist, ref board, false);
 
-           
+
             
+
             if (movelist.Count == 0)
             {
                 //Console.WriteLine("no move");
@@ -350,6 +389,8 @@ namespace Turbulence
             int org_halfmove = board.halfmove;
             List<ulong> threefold_org = new List<ulong>(threeFoldRep);
             bool isRepClear = false;
+
+            int score = minusINFINITY;
             for (int i = 0; i < movelist.Count; i++)
             {
                 isRepClear = false;
@@ -377,12 +418,18 @@ namespace Turbulence
 
                 board.halfmove++;
                 MakeMove(ref board, movelist[i], ref ZobristKey);
+                nodes++;
                 threeFoldRep.Add(ZobristKey);
 
 
 
-                score = -negaMax(ref board, depth - 1, -beta, -alpha, ref pv_length, ref pv_table, movelist[i] , ZobristKey, ref TTtable, ref threeFoldRep);
+                int child_score = -negaMax(ref board, depth - 1, -beta, -alpha, ref pv_length, ref pv_table, movelist[i] , ZobristKey, ref TTtable, ref threeFoldRep);
 
+                if(child_score > score)
+                {
+                    score = child_score;
+                    best_move = movelist[i];
+                }
 
                 ply--;
 
@@ -402,15 +449,10 @@ namespace Turbulence
                 }
                 
                 
-                if (score > best_score)
+
+                if (score > alpha)
                 {
-                    hashf = HASH_EXACT;
-                    best_move = movelist[i];
-                    best_score = score;
-                }
-                if (best_score > alpha)
-                {
-                    alpha = best_score;
+                    alpha = score;
 
                     best_move = movelist[i];
                     pv_table[ply][ply] = movelist[i];
@@ -426,20 +468,40 @@ namespace Turbulence
                     isSuccess = false;
                     return 0;
                 }
-                if (best_score >= beta)
+                if (alpha >= beta)
                 {
 
-                    updateTT(beta, depth, HASH_BETA, ref TTtable, ZobristKey, movelist[i]);
+                    //updateTT(beta, depth, HASH_BETA, ref TTtable, ZobristKey, movelist[i]);
                     if (!killerMoves[ply, 0].Equals(movelist[i]) && !killerMoves[ply, 1].Equals(movelist[i]))
                     {
                         killerMoves[ply, 1] = killerMoves[ply, 0];
                         killerMoves[ply, 0] = movelist[i];
                     }
-                    return beta;
+                    break;
                 }
                 
             }
-            updateTT(alpha, depth, hashf, ref TTtable, ZobristKey, best_move );
+
+            if (ttEntry.Compare(default)) ttEntry = new Transposition();
+            ttEntry.value = score;
+            if(score <= alphaOrg)
+            {
+                ttEntry.flags = UPPERBOUND;
+            }
+            else if(score >= beta)
+            {
+                ttEntry.flags = LOWERBOUND;
+            }
+            else
+            {
+                ttEntry.flags = EXACT;
+            }
+            ttEntry.depth = depth;
+            ttEntry.key = OrgZobrist;
+            ttEntry.bestMove = best_move;
+            
+
+            updateTT(ttEntry, ref TTtable, OrgZobrist);
             return alpha;
 
 
@@ -483,61 +545,40 @@ namespace Turbulence
             }
             return false;
         }
-        static int probeHash(int ply, int alpha, int beta, ref Transposition[] TTtable, ulong Zobrist, out Move move)
+        static Transposition transpositionTableLookup(ref Transposition[] TTtable, ulong Zobrist)
         {
-            Transposition hashEntry = TTtable[get_hash_Key(Zobrist, TT_SIZE)];
-            if(hashEntry != null && hashEntry.key == Zobrist)
-            {
-                if(hashEntry.ply >= ply)
-                {
-                    move = hashEntry.bestMove;
-                    if (hashEntry.flags == HASH_EXACT)
-                        return hashEntry.value;
-                    if (hashEntry.flags == HASH_ALPHA && hashEntry.value <= alpha)
-                        return alpha;
-                    if(hashEntry.flags == HASH_BETA && hashEntry.value >= beta)
-                        return beta;
+            
+            //if(hashEntry != null && hashEntry.key == Zobrist)
+            //{
+            //    if(hashEntry.ply >= ply)
+            //    {
+            //        move = hashEntry.bestMove;
+            //        if (hashEntry.flags == HASH_EXACT)
+            //            return hashEntry.value;
+            //        if (hashEntry.flags == HASH_ALPHA && hashEntry.value <= alpha)
+            //            return alpha;
+            //        if(hashEntry.flags == HASH_BETA && hashEntry.value >= beta)
+            //            return beta;
 
-                }
-            }
-            move = new Move();
-            return valUNKNOWN;
+            //    }
+            //}
+            //move = new Move();
+
+            return TTtable[get_hash_Key(Zobrist, TT_SIZE)];
 
         }
-        static void updateTT(int score, int ply, int hash_flag, ref Transposition[] TTtable, ulong Zobrist, Move bestmove)
+        static void updateTT(Transposition TTEntry, ref Transposition[] TTtable, ulong Zobrist)
         {
+            TTtable[get_hash_Key(Zobrist, TT_SIZE)] = TTEntry;
             //Transposition hash_entry = TTtable[get_hash_Key(Zobrist, TT_SIZE)]
-            if (TTtable[get_hash_Key(Zobrist, TT_SIZE)] == null) // hash empty
-            {
-                //Console.WriteLine("a");
-                TTtable[get_hash_Key(Zobrist, TT_SIZE)] = new Transposition();
-                TTtable[get_hash_Key(Zobrist, TT_SIZE)].key = Zobrist;
-                TTtable[get_hash_Key(Zobrist, TT_SIZE)].value = score;
-                TTtable[get_hash_Key(Zobrist, TT_SIZE)].flags = hash_flag;
-                TTtable[get_hash_Key(Zobrist, TT_SIZE)].ply = ply;
-                TTtable[get_hash_Key(Zobrist, TT_SIZE)].bestMove = bestmove;
 
-            }
-            else if(ply > TTtable[get_hash_Key(Zobrist, TT_SIZE)].ply) //depth scheme
-            {
-                
-                //Console.WriteLine(TTtable[get_hash_Key(Zobrist, TT_SIZE)].ply);
-                //Console.WriteLine(ply);
-                //Console.Write("\n");
-
-
-                TTtable[get_hash_Key(Zobrist, TT_SIZE)].key = Zobrist;
-                TTtable[get_hash_Key(Zobrist, TT_SIZE)].value = score;
-                TTtable[get_hash_Key(Zobrist, TT_SIZE)].flags = hash_flag;
-                TTtable[get_hash_Key(Zobrist, TT_SIZE)].ply = ply;
-                TTtable[get_hash_Key(Zobrist, TT_SIZE)].bestMove = bestmove;
-            }
         }
         static int get_hash_Key(ulong zobrist, int hashsize)
         {
             return (int)(zobrist % (ulong)hashsize);
         }
-        static int Quiescence(ref Board board, int depth, int alpha, int beta, Move lmove, ulong ZobristKey)
+        
+        static unsafe int Quiescence(ref Board board, int depth, int alpha, int beta, Move lmove, ulong ZobristKey)
         {
             if (IS_SEARCH_STOPPED)
             {
@@ -546,8 +587,7 @@ namespace Turbulence
             }
             int stand_pat = EvalPos(board);
             //return stand_pat;
-            q_count++;
-
+            
             if (stand_pat >= beta)
             {
                 return beta;
@@ -562,6 +602,11 @@ namespace Turbulence
             }    
             List<Move> movelist = new();
             Generate_Legal_Moves(ref movelist, ref board, true);
+            if (movelist.Count == 0) //no capture available
+            {
+                return stand_pat;
+            }
+
             if (isMoveorder & depth != 1)
             {
                 SortMoves(movelist, lmove, ref board);
@@ -569,10 +614,7 @@ namespace Turbulence
 
             }
 
-            if (movelist.Count == 0) //no capture available
-            {
-                return stand_pat;
-            }
+
 
             for(int i = 0; i < movelist.Count; i++)
             {
@@ -588,6 +630,7 @@ namespace Turbulence
                 ulong lastZobrist = ZobristKey;
 
                 MakeMove(ref board, movelist[i], ref ZobristKey);
+                q_count++;
 
                 int score = -Quiescence(ref board, depth - 1, -beta, -alpha, lmove, ZobristKey);
                 
