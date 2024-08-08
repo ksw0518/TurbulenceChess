@@ -18,7 +18,8 @@ namespace Turbulence
 {
     public static class Search
     {
-        
+       
+
         public const int valUNKNOWN = int.MinValue;
         public const int EXACT = 0;
         public const int LOWERBOUND = 1;
@@ -171,6 +172,7 @@ namespace Turbulence
                 
                 Console.Write(" time " + (int)timeMS);
                 Console.Write(" nodes " + realNodes);
+                Console.Write(" hashfull " + get_hashfull(ref TT_Table));
                 if ((int)NPS < 0) NPS = 0;
                 Console.Write(" nps " + (int)NPS);
                // Console.Write(" q_move " + q_count);
@@ -219,6 +221,28 @@ namespace Turbulence
 
             return eval;
         }
+
+        static int get_hashfull(ref Transposition[] TT)
+        {
+            int hash = 0;
+            if(TT.Length >= 1000)
+            {
+                for (int i = 0; i < 1000; i++)
+                {
+                    if (!TT[i].Compare(default))
+                    {
+                        hash++;
+                    }
+                }
+                return hash;
+            }
+            else
+            {
+                return 0;
+            }
+            
+
+        }
         static int Get_MVVLVA_Value(Move move, ref Board board)
         {
             int from = move.From;
@@ -234,7 +258,7 @@ namespace Turbulence
         }
         static int negaMax(ref Board board, int depth, int alpha, int beta, ref int[] pv_length, ref Move[][] pv_table, Move lmove, ulong ZobristKey, ref Transposition[] TTtable, ref List<ulong> threeFoldRep)
         {
-            
+            //Console.WriteLine(ply);
             if (time_ellapsed.ElapsedMilliseconds >= THINK_TIME)
             {
                 //Console.WriteLine(time_ellapsed.ElapsedMilliseconds);
@@ -273,17 +297,13 @@ namespace Turbulence
 
             Transposition ttEntry = transpositionTableLookup(ref TTtable, ZobristKey);
 
-            if(!ttEntry.Compare(default) && ttEntry.depth >= depth && ttEntry.key == ZobristKey)
+            if(ply >= 1 && !ttEntry.Compare(default) && ttEntry.depth > depth && ttEntry.key == ZobristKey)
             {
                 if (ttEntry.flags == EXACT)
                 {
-                    pv_table[ply][ply] = ttEntry.bestMove;
+                    pv_length[ply] = ply;
 
-                    for (int next_ply = ply + 1; next_ply < pv_length[ply + 1]; next_ply++)
-                    {
-                        pv_table[ply][next_ply] = new Move(0, 0, 0, 0);
-                    }
-                    pv_length[ply] = 1;
+                    pv_table[ply][ply] = ttEntry.bestMove;
                     return ttEntry.value;
                 }
                 else if(ttEntry.flags == LOWERBOUND)

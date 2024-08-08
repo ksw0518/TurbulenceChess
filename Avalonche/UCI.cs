@@ -29,7 +29,7 @@ namespace Turbulence
         }
         //public static int main_halfmove;
         public static int TT_hit = 0;
-        public const int TT_SIZE = 1;//33554432
+        public const int TT_SIZE = 33554432;//33554432
         static Transposition[] TT_Table = new Transposition[TT_SIZE];
 
         static Transposition_Perft[] TT_Table_perft = new Transposition_Perft[TT_SIZE];
@@ -485,7 +485,8 @@ namespace Turbulence
             else if (main_command == "ucinewgame")
             {
                 //Console.WriteLine("readyok");
-
+                TT_Table = new Transposition[TT_SIZE];
+                Reset_PV();
                 parse_fen(start_position, ref main_board);
             }
             else if(main_command == "show")
@@ -501,7 +502,7 @@ namespace Turbulence
             }
             else if(main_command == "go")
             {
-                TT_Table = new Transposition[TT_SIZE];
+                //TT_Table = new Transposition[TT_SIZE];
                 Reset_PV();
                 IS_SEARCH_STOPPED = false;
                 if (parts.Contains("movetime"))
