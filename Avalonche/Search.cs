@@ -96,7 +96,9 @@ namespace Turbulence
             st.Start();
             Move bestmove = new Move();
             Move lastBmove = new Move();
-            isSuccess = true;
+            isSuccess = true; 
+            nodes = 0;
+            q_count = 0;
             //Console.WriteLine(depth);
             //Transposition[] tt = new Transposition[TT_SIZE];
             for (int i = 1; i < depth + 1; i++)
@@ -109,8 +111,7 @@ namespace Turbulence
                 //{
                 //    Console.WriteLine(Three_fold_forSearch[j]);
                 //}
-                nodes = 0;
-                q_count = 0;
+                
                 //Console.WriteLine(i);
                 lastBmove = new Move(bestmove.From, bestmove.To, bestmove.Type, bestmove.Piece);
                 if (time_ellapsed.ElapsedMilliseconds > THINK_TIME)
@@ -125,7 +126,7 @@ namespace Turbulence
                 {
                     isSuccess = true;
                 }
-                st.Reset();
+                //st.Reset();
                 st.Start();
 
 
@@ -198,18 +199,18 @@ namespace Turbulence
             Console.Write("bestmove ");
             printMove(bestmove);
 
-            MakeMove(ref board, bestmove, ref Zobrist);
+            //MakeMove(ref board, bestmove, ref Zobrist);
 
 
-            if (isMoveIrreversible(bestmove))
-            {
-                Three_fold.Clear();
-                board.halfmove = 0;
-            }
+            //if (isMoveIrreversible(bestmove))
+            //{
+            //    Three_fold.Clear();
+            //    board.halfmove = 0;
+            //}
 
-            board.halfmove++;
+            //board.halfmove++;
 
-            Three_fold.Add(Zobrist);
+            //Three_fold.Add(Zobrist);
             //Console.WriteLine(DetectThreefold(ref Three_fold));
             //for (int j = 0; j < Three_fold.Count; j++)
             //{
@@ -270,13 +271,13 @@ namespace Turbulence
                 isSuccess = false;
                 return 0;
             }
-            if (board.halfmove >= 100)
+            if (ply != 0 && board.halfmove >= 100 )
             {
-                List<Move> move = new();
-                Generate_Legal_Moves(ref move, ref board, false);
-                pv_length[ply] = ply + 1;
+                //List<Move> move = new();
+                //Generate_Legal_Moves(ref move, ref board, false);
+                //pv_length[ply] = ply + 1;
 
-                pv_table[ply][ply] = move[0];
+                //pv_table[ply][ply] = move[0];
 
 
                 //Console.WriteLine("halfmove");
@@ -308,7 +309,7 @@ namespace Turbulence
             {
                 if (ttEntry.flags == EXACT)
                 {
-                    pv_length[ply] = ply + 1;
+                    pv_length[ply] = ply;
 
                     pv_table[ply][ply] = ttEntry.bestMove;
                     return ttEntry.value;
@@ -425,19 +426,19 @@ namespace Turbulence
             Move killer1 = killerMoves[ply, 0];
             Move killer2 = killerMoves[ply, 1];
 
-
-            int killer1Pos = movelist.IndexOf(killer1);
-            if(killer1Pos != -1)
-            {
-                movelist.RemoveAt(killer1Pos);
-                movelist.Insert(0, killer1);
-            }
             int killer2Pos = movelist.IndexOf(killer2);
             if (killer2Pos != -1)
             {
                 movelist.RemoveAt(killer2Pos);
                 movelist.Insert(0, killer2);
             }
+            int killer1Pos = movelist.IndexOf(killer1);
+            if(killer1Pos != -1)
+            {
+                movelist.RemoveAt(killer1Pos);
+                movelist.Insert(0, killer1);
+            }
+
             int org_halfmove = board.halfmove;
             List<ulong> threefold_org = new List<ulong>(threeFoldRep);
             bool isRepClear = false;
@@ -659,7 +660,7 @@ namespace Turbulence
                 return stand_pat;
             }
 
-            if (isMoveorder & depth != 1)
+            if (isMoveorder && depth != 1)
             {
                 SortMoves(movelist, lmove, ref board);
                 //movelist.Sort((move1, move2) => CompareMoves(move1, move2, lmove, ref board));
