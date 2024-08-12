@@ -29,7 +29,7 @@ namespace Turbulence
         }
         //public static int main_halfmove;
         public static int TT_hit = 0;
-        public const int TT_SIZE = 33554432;//33554432
+        public const int TT_SIZE = 1;//8388608
         static Transposition[] TT_Table = new Transposition[TT_SIZE];
 
         static Transposition_Perft[] TT_Table_perft = new Transposition_Perft[TT_SIZE];
@@ -49,9 +49,10 @@ namespace Turbulence
         public static int[] pv_length = new int[64];
         public static Move[][] pv_table = new Move[64][]; 
         static readonly string[] goLabels = new[] { "go", "movetime", "wtime", "btime", "winc", "binc", "movestogo" };
+        static readonly string[] fenLabels = new[] { "position", "fen", "moves" };
         static void Main(string[] args) 
         {
-            
+            //Console.WriteLine(0x0000000000000000000000000000000000000000000000000000000000000011);
             InitAll();
            
             UCI uci = new UCI();
@@ -118,11 +119,14 @@ namespace Turbulence
                 {
                     Console.WriteLine(Repetition_table[j]);
                 }
+                Console.Write("is it draw by three fold repetition?");
+                Console.Write(DetectThreefold(ref Repetition_table) + "\n");
             }
             if (main_command == "position")
             {
                 if (parts[1] == "startpos")
                 {
+                    Repetition_table.Clear();
                     if (parts.Length == 2)
                     {
                         
@@ -135,7 +139,7 @@ namespace Turbulence
                     {
                         int startindex = 2;
                         if (parts[2] == "moves") startindex = 3;
-                        Repetition_table.Clear();
+                        //Repetition_table.Clear();
                         //Console.WriteLine("1");
                         //Console.WriteLine(parts.Length);
                         //TT_Table = new Transposition[TT_SIZE];
@@ -143,7 +147,7 @@ namespace Turbulence
                         IS_SEARCH_STOPPED = false;
 
                         parse_fen(start_position, ref main_board);
-                        Get_Zobrist(ref main_board, ref main_Zobrist);
+                        //Get_Zobrist(ref main_board, ref main_Zobrist);
                         List<string> moves = new List<string>();
                         for (int i = startindex; i < parts.Length; i++)
                         {
@@ -153,7 +157,7 @@ namespace Turbulence
 
                         }
                         List<Move> moveList = new List<Move>();
-                        List<Move> Move_to_do = new List<Move>();
+                        List<Move> Move_to_do = new List<Move>(); 
                         //Generate_Legal_Moves(ref moveList, ref main_board, false);
                         //Console.Write("                        ");
                         for (int i = 0; i < moves.Count; i++)
@@ -174,6 +178,7 @@ namespace Turbulence
                             //Console.WriteLine(CoordinatesToChessNotation(movetofind.To));
                             moveList.Clear();
                             Generate_Legal_Moves(ref moveList, ref main_board, false);
+                            
                             //PrintLegalMoves(moveList);
                             for (int j = 0; j < moveList.Count; j++)
                             {
@@ -253,6 +258,7 @@ namespace Turbulence
 
                             //PrintBoards(main_board);
                         }
+                        Get_Zobrist(ref main_board, ref main_Zobrist);
                     }
                     //Console.WriteLine(main_board.halfmove);
                    // Console.WriteLine(Repetition_table.Count);
@@ -388,18 +394,152 @@ namespace Turbulence
                 }
                 else if(parts[1] == "fen")
                 {
-                    string fen = "";
-                    int i = 2;
-                    while (i < parts.Length)
+                    Reset_PV();
+                    IS_SEARCH_STOPPED = false;
+                    string fen = TryGetLabelledValue(input, "fen", fenLabels);
+                    string move = TryGetLabelledValue(input, "moves", fenLabels);
+                    Repetition_table.Clear();
+                    if (move == "")
                     {
-                        fen += parts[i] + " ";
-                        i++;
-                    }
-                    //Console.WriteLine(fen);
-                    parse_fen(fen, ref main_board);
+                        //Console.WriteLine(fen);
+                        parse_fen(fen, ref main_board);
 
-                    Get_Zobrist(ref main_board, ref main_Zobrist);
-                    //MakeMove(ref main_board, new Move(Square.d8, Square.d4, capture, Piece.r), ref main_Zobrist);
+                        Get_Zobrist(ref main_board, ref main_Zobrist);
+                        //MakeMove(ref main_board, new Move(Square.d8, Square.d4, capture, Piece.r), ref main_Zobrist);
+                    }
+                    else
+                    {
+                        //Console.WriteLine(fen);
+                        parse_fen(fen, ref main_board);
+                        //PrintBoards(main_board);
+                        Get_Zobrist(ref main_board, ref main_Zobrist);
+                        List<string> moves = new List<string>();
+                        string temp = "";
+                        for (int i = 0; i < move.Length; i++)
+                        {
+                            //Console.WriteLine(i)
+
+                            if (move[i] == ' ')
+                            {
+                                //Console.WriteLine(temp);
+                                moves.Add(temp);
+                                temp = "";
+                            }
+                            else
+                            {
+                                temp += move[i];
+                            }
+                            
+                            
+                        }
+                        moves.Add(temp);// Console.WriteLine(temp);
+                        List<Move> moveList = new List<Move>(); //Console.Write("\n");
+                        List<Move> Move_to_do = new List<Move>();
+                        //Generate_Legal_Moves(ref moveList, ref main_board, false);
+                        //Console.Write("                        ");
+                        for (int i = 0; i < moves.Count; i++)
+                        {
+                            string From = moves[i][0].ToString() + moves[i][1].ToString();
+                            string To = moves[i][2].ToString() + moves[i][3].ToString();
+
+                            string promo = "";
+                            if (moves[i].Length > 4)
+                            {
+                                promo = moves[i][4].ToString();
+                            }
+
+                            Move movetofind = new Move();
+                            movetofind.From = Square.GetSquare(From);
+                            //Console.WriteLine(CoordinatesToChessNotation(movetofind.From));
+                            movetofind.To = Square.GetSquare(To);
+                            //Console.WriteLine(CoordinatesToChessNotation(movetofind.To));
+                            moveList.Clear();
+                            Generate_Legal_Moves(ref moveList, ref main_board, false);
+                            
+                            //PrintLegalMoves(moveList);
+                            for (int j = 0; j < moveList.Count; j++)
+                            {
+                                //Console.WriteLine("12");
+                                nodes = 0;
+
+                                if ((movetofind.From == moveList[j].From) && (movetofind.To == moveList[j].To)) //found same move
+                                {
+
+
+                                    //printMove(moveList[j]);
+                                    if ((moveList[j].Type & knight_promo) != 0) // promo
+                                    {
+                                        if (promo == "q")
+                                        {
+                                            if ((moveList[j].Type == queen_promo) | (moveList[j].Type == queen_promo_capture))
+                                            {
+                                                MakeMove(ref main_board, moveList[j], ref main_Zobrist);
+                                                break;
+
+                                                //Move_to_do.Add(moveList[j]);
+                                            }
+                                        }
+                                        else if (promo == "r")
+                                        {
+                                            if ((moveList[j].Type == rook_promo) | (moveList[j].Type == rook_promo_capture))
+                                            {
+                                                MakeMove(ref main_board, moveList[j], ref main_Zobrist);
+                                                break;
+                                                //Move_to_do.Add(moveList[j]);
+                                            }
+                                        }
+                                        else if (promo == "b")
+                                        {
+                                            if ((moveList[j].Type == bishop_promo) | (moveList[j].Type == bishop_promo_capture))
+                                            {
+                                                MakeMove(ref main_board, moveList[j], ref main_Zobrist);
+                                                break;
+                                                //Move_to_do.Add(moveList[j]);
+                                            }
+                                        }
+                                        else if (promo == "n")
+                                        {
+                                            if ((moveList[j].Type == knight_promo) | (moveList[j].Type == knight_promo_capture))
+                                            {
+                                                MakeMove(ref main_board, moveList[j], ref main_Zobrist);
+                                                break;
+                                                //Move_to_do.Add(moveList[j]);
+                                            }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        //Console.WriteLine(MoveType[moveList[j].Type]);
+                                        //Console.WriteLine(ascii_pieces[moveList[j].Piece]);
+                                        // printMove(moveList[j]);
+                                        //Console.Write(" ");
+                                        //Move_to_do.Add(moveList[j]); 
+                                        MakeMove(ref main_board, moveList[j], ref main_Zobrist);
+                                        if (isMoveIrreversible(moveList[j]))
+                                        {
+                                            //Console.WriteLine("aaa");
+
+
+                                            Repetition_table.Clear();
+                                            main_board.halfmove = 0;
+                                        }
+                                        Repetition_table.Add(main_Zobrist);
+                                        main_board.halfmove++;
+
+
+                                        break;
+                                    }
+
+
+
+                                }
+                            }
+
+                            //PrintBoards(main_board);
+                        }
+                        Get_Zobrist(ref main_board, ref main_Zobrist);
+                    }
+
                 }
                 else
                 {
@@ -484,10 +624,12 @@ namespace Turbulence
             }
             else if (main_command == "ucinewgame")
             {
+                Repetition_table.Clear();
                 //Console.WriteLine("readyok");
                 TT_Table = new Transposition[TT_SIZE];
                 Reset_PV();
                 parse_fen(start_position, ref main_board);
+                Get_Zobrist(ref main_board, ref main_Zobrist);
             }
             else if(main_command == "show")
             {
@@ -531,7 +673,7 @@ namespace Turbulence
                     }
                     //Console.WriteLine(timeRemainingWhiteMs);
                     THINK_TIME = ChooseThinkTime(myRemTime, myIncTime);
-                   Console.WriteLine(THINK_TIME);
+                   //Console.WriteLine(THINK_TIME);
                     //Console.WriteLine(timeRemainingWhiteMs);
                     int eval = StartSearch(ref main_board, 64, ref pv_length, ref pv_table, main_Zobrist, ref TT_Table, ref Repetition_table);
 
@@ -550,7 +692,14 @@ namespace Turbulence
             {
                 Environment.Exit(Environment.ExitCode);
             }
-
+            else if (main_command == "printbb")
+            {
+                print_Bitboard_seperately(ref main_board);
+            }
+            else if (main_command == "printrepetiton")
+            {
+                print_Bitboard_seperately(ref main_board);
+            }
         }
 
         int ChooseThinkTime(int time, int incre)
@@ -641,14 +790,28 @@ namespace Turbulence
                 board.castle = lastCastle;
                 board.side = lastside;
                 Zobrist = lastZobrist;
-
+                
             }
 
 
             return nodes;
         }
 
-
+        void print_Bitboard_seperately(ref Board board)
+        {
+            
+            for(int i = 0; i < board.bitboards.Length; i++)
+            {
+                PrintBitboard(board.bitboards[i]);
+                Console.Write("\n");
+            }
+            Console.Write("\n\n");
+            for (int i = 0; i < board.occupancies.Length; i++)
+            {
+                PrintBitboard(board.occupancies[i]);
+                Console.Write("\n");
+            }
+        }
         ulong perft_withHash(int depth, ref Board board, ulong Zobrist, ref Transposition_Perft[] TT)
         {
 

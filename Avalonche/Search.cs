@@ -272,6 +272,14 @@ namespace Turbulence
             }
             if (board.halfmove >= 100)
             {
+                List<Move> move = new();
+                Generate_Legal_Moves(ref move, ref board, false);
+                pv_length[ply] = ply + 1;
+
+                pv_table[ply][ply] = move[0];
+
+
+                //Console.WriteLine("halfmove");
                 return 0;
             }
             //Console.WriteLine("a");
@@ -296,30 +304,54 @@ namespace Turbulence
             Move TT_Best_Move;
 
             Transposition ttEntry = transpositionTableLookup(ref TTtable, ZobristKey);
-
-            if(ply >= 1 && !ttEntry.Compare(default) && ttEntry.depth > depth && ttEntry.key == ZobristKey)
+            if (ply >= 1 && !ttEntry.Compare(default) && ttEntry.depth >= depth && ttEntry.key == ZobristKey)
             {
                 if (ttEntry.flags == EXACT)
+                {
+                    pv_length[ply] = ply + 1;
+
+                    pv_table[ply][ply] = ttEntry.bestMove;
+                    return ttEntry.value;
+                }
+                else if (ttEntry.flags == LOWERBOUND && ttEntry.value >= beta)
                 {
                     pv_length[ply] = ply;
 
                     pv_table[ply][ply] = ttEntry.bestMove;
                     return ttEntry.value;
                 }
-                else if(ttEntry.flags == LOWERBOUND)
+                else if (ttEntry.flags == UPPERBOUND && ttEntry.value <= alpha)
                 {
-                    if(alpha < ttEntry.value) alpha = ttEntry.value;
-                }
-                else if(ttEntry.flags == UPPERBOUND)
-                {
-                    if(beta > ttEntry.value) beta = ttEntry.value;
-                }
+                    pv_length[ply] = ply;
 
-                if(alpha >= beta)
-                {
+                    pv_table[ply][ply] = ttEntry.bestMove;
                     return ttEntry.value;
                 }
+
             }
+            //if (ply >= 1 && !ttEntry.Compare(default) && ttEntry.depth > depth && ttEntry.key == ZobristKey)
+            //{
+            //    if (ttEntry.flags == EXACT)
+            //    {
+            //        pv_length[ply] = ply;
+
+            //        pv_table[ply][ply] = ttEntry.bestMove;
+            //        return ttEntry.value;
+            //    }
+            //    else if(ttEntry.flags == LOWERBOUND)
+            //    {
+            //        if(alpha < ttEntry.value) alpha = ttEntry.value;
+            //    }
+            //    else if(ttEntry.flags == UPPERBOUND)
+            //    {
+            //        if(beta > ttEntry.value) beta = ttEntry.value;
+            //    }
+
+            //    if(alpha >= beta)
+            //    {
+            //        return ttEntry.value;
+            //    }
+            //}
 
             //score = 
             //if (score != valUNKNOWN)
@@ -539,7 +571,7 @@ namespace Turbulence
 
             //Console.WriteLine("currhash " + currentHash);
             //Console.WriteLine(table_length);
-            for (int i = table_length - 2; i >= 0; i -= 2)
+            for (int i = table_length - 1; i >= 0; i -= 1)
             {
                 //Console.WriteLine(i);
                 //Console.WriteLine("compare " + Rep_table[i]);

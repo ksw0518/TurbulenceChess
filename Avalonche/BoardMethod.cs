@@ -211,15 +211,17 @@ namespace Turbulence
             else
                 board.side = (int)Side.Black;
 
-            index += 2;
+            index += 2; 
 
+            board.castle = 0;
             for (int i = 0; i < 4; i++)
             {
+               
                 if (fen[index] == 'K') board.castle |= WhiteKingCastle;
                 if (fen[index] == 'Q') board.castle |= WhiteQueenCastle;
                 if (fen[index] == 'k') board.castle |= BlackKingCastle;
                 if (fen[index] == 'q') board.castle |= BlackQueenCastle;
-
+                if (fen[index] == ' ') break;
                 if (fen[index] == '-')
                 {
                     board.castle = 0;
@@ -227,9 +229,10 @@ namespace Turbulence
                 }
 
 
-                if (fen[index] == ' ') break;
+                
                 index++;
             }
+            //PrintBoards(board);
             index++;
             if (fen[index] == ' ') index++;
             if (fen[index] != '-')
