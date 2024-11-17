@@ -1,3 +1,7 @@
+#this project has moved to https://github.com/ksw0518/Turbulence_v4 completely. no update since this text
+
+
+
 # Turbulence
 
 ------Turbulence chess engine------
@@ -6,7 +10,7 @@
 
 - [lichess link](https://lichess.org/@/turbulencebot) 
 
-- still in development
+
 
 ## it's really terrible probably you can even beat it
 ## applied techniques
